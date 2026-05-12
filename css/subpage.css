@@ -123,7 +123,7 @@
 #tabmap a:hover {z-index:2;border:1px solid #0069b6;background:#fff;color:#0069b6;}
 
 /* 노인일자리소개 */
-#job_intro_figma {padding:0 24px 24px;color:#374151;font-family:'NotoSans','NanumGothic',dotum,sans-serif;text-align:left;}
+#job_intro_figma {padding:0 0 24px;color:#374151;font-family:'NotoSans','NanumGothic',dotum,sans-serif;text-align:left;}
 #job_intro_figma h3 {margin:0 0 20px;color:#1f2937;font-size:24px;line-height:40px;font-weight:bold;letter-spacing:0;}
 .ji_intro {padding-bottom:56px;}
 .ji_summary {padding:23px;border:1px solid #e5e7eb;border-radius:12px;background:#f9fafb;}
@@ -299,6 +299,5 @@ box-shadow: inset 0 1px 1px rgba(0, 0, 0, .075);
 .edu_td_num {width:50px;text-align:center}
 .edu_td_numbig {width:80px;text-align:center}
 .edu_td_stat {width:60px;text-align:center}
-
 
 

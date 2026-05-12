@@ -354,7 +354,7 @@ html ul.stabs li.active, html ul.stabs li.active a:hover, html ul.stabs li.activ
 
 #sub {position: relative;width: 1050px;margin:30px auto;clear: both;}
 #sub:after{content: "";display: block;clear: both;}
-#sub.sub_full_width {width:1200px;margin:30px auto;}
+#sub.sub_full_width {width:1050px;margin:30px auto;}
 #sub.sub_full_width #contents {padding-top:40px;}
 
 

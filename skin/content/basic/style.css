@@ -14,7 +14,7 @@
 #ctt.ctt_sub02_02 #ctt_con,
 #ctt.ctt_sub02_03 #ctt_con {padding:0;line-height:1.4}
 
-.network_figma {width:100%;padding:0 24px;font-family:'NotoSans','NanumGothic',dotum,sans-serif}
+.network_figma {width:100%;font-family:'NotoSans','NanumGothic',dotum,sans-serif}
 .network_section {padding-bottom:56px}
 .network_section_head {display:flex;align-items:center;gap:12px;height:66px;margin-bottom:24px;padding:17px 25px;border:1px solid;border-radius:12px}
 .network_section_head span {display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:50%;color:#fff;font-size:14px;line-height:20px;font-weight:bold}
@@ -23,9 +23,9 @@
 .network_grid_half {grid-template-columns:repeat(2, minmax(0, 1fr))}
 .network_grid_quarter {grid-template-columns:repeat(4, minmax(0, 1fr))}
 .network_grid figure {margin:0}
-#ctt_con .network_grid img {display:block;width:100%;border-radius:8px;object-fit:cover}
-#ctt_con .network_grid_half img {height:423px}
-#ctt_con .network_grid_quarter img {height:203px}
+#ctt_con .network_grid img {display:block;width:100%;height:auto;border-radius:8px;object-fit:cover}
+#ctt_con .network_grid_half img {aspect-ratio:564 / 423}
+#ctt_con .network_grid_quarter img {aspect-ratio:270 / 202.5}
 .network_grid figcaption {padding-top:12px;color:#374151;font-size:18px;line-height:19.25px;font-weight:500;text-align:center;word-break:keep-all}
 
 .network_theme_amber .network_section_head {background:#fffbeb;border-color:#fde68a}
