@@ -40,8 +40,8 @@ switch ($gr_id) {
 		$SWF_pageNum	= '2';
 		switch ($co_id) {
 		  case 'sub02_01' :$SWF_Num = '1';	$board['bo_subject'] = '일자리사업';  break;
-		  case 'sub02_02' :$SWF_Num = '2';	$board['bo_subject'] = '노인일자리확충을 위한 네트워크사업';  break;
-		  case 'sub02_03' :$SWF_Num = '3';	$board['bo_subject'] = '네트워크사업';  break;
+		  case 'sub02_02' :$SWF_Num = '2';	$board['bo_subject'] = '교육사업';  break;
+		  case 'sub02_03' :$SWF_Num = '3';	$board['bo_subject'] = '노인일자리확충을 위한 네트워크사업';  break;
 		  case 'sub02_04' :$SWF_Num = '4';	$board['bo_subject'] = '지역복지사업';  break;
 		}
 	break;
@@ -185,9 +185,9 @@ if(!$board['bo_subject']){
 	</div> 
 	<!--로케이션영역 끝-->
 
-	<? if (!isset($co_id) || !in_array($co_id, array('sub01_02', 'sub02_02'))) include_once(G5_PATH.'/inc/left.php');?>
+	<? if (!isset($co_id) || !in_array($co_id, array('sub01_02', 'sub02_03'))) include_once(G5_PATH.'/inc/left.php');?>
 
-	<div id="sub" class="<?php echo (isset($co_id) && in_array($co_id, array('sub01_02', 'sub02_02'))) ? 'sub_full_width' : ''; ?>"> <!-- (s)sub-->	  
+	<div id="sub" class="<?php echo (isset($co_id) && in_array($co_id, array('sub01_02', 'sub02_03'))) ? 'sub_full_width' : ''; ?>"> <!-- (s)sub-->	  
 		<p class="pt_underline"><span id="pt_title"><?=$board['bo_subject']?></span><span class="pt_title_side">행복한 노후! 새로운 청춘! 전북노인일자리센터가 희망과 활기를 불어넣어 드리겠습니다.</span></p>							
 			
 		<div id="contents">

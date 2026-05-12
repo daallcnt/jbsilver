@@ -11,8 +11,8 @@ add_stylesheet('<link rel="stylesheet" href="'.$content_skin_url.'/style.css">',
     </header>
 
     <div id="ctt_con">
-        <?php if ($co_id == 'sub02_02') { ?>
-        <?php $figma_img_url = G5_IMG_URL.'/figma_sub02_02'; ?>
+        <?php if ($co_id == 'sub02_03') { ?>
+        <?php $figma_img_url = G5_IMG_URL.'/figma_sub02_03'; ?>
         <div class="network_figma">
             <section class="network_section network_theme_amber">
                 <div class="network_section_head">
