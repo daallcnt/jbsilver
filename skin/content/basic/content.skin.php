@@ -11,7 +11,86 @@ add_stylesheet('<link rel="stylesheet" href="'.$content_skin_url.'/style.css">',
     </header>
 
     <div id="ctt_con">
-        <?php if ($co_id == 'sub02_03') { ?>
+        <?php if ($co_id == 'sub02_02') { ?>
+        <?php $figma_img_url = G5_IMG_URL.'/figma_sub02_02'; ?>
+        <div class="network_figma education_figma">
+            <section class="network_section network_theme_amber">
+                <div class="network_section_head">
+                    <span>1</span>
+                    <h3>60+ 취업준비교육</h3>
+                </div>
+                <div class="network_grid network_grid_half">
+                    <figure>
+                        <img src="<?php echo $figma_img_url; ?>/prep_1.png" alt="60+ 취업준비교육 강의">
+                        <figcaption>-</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="<?php echo $figma_img_url; ?>/prep_2.png" alt="60+ 취업준비교육 현장실습">
+                        <figcaption>-</figcaption>
+                    </figure>
+                </div>
+            </section>
+
+            <section class="network_section network_theme_green">
+                <div class="network_section_head">
+                    <span>2</span>
+                    <h3>노인일자리 민관네트워크사업</h3>
+                </div>
+                <div class="network_grid network_grid_quarter">
+                    <figure>
+                        <img src="<?php echo $figma_img_url; ?>/digital_tutor.png" alt="디지털튜터 자격과정">
+                        <figcaption>디지털튜터 자격과정</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="<?php echo $figma_img_url; ?>/barista.png" alt="바리스타2급 자격과정">
+                        <figcaption>바리스타2급 자격과정</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="<?php echo $figma_img_url; ?>/safety.png" alt="안전지도사 자격과정">
+                        <figcaption>안전지도사 자격과정</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="<?php echo $figma_img_url; ?>/care.png" alt="돌봄지도사 자격과정">
+                        <figcaption>돌봄지도사 자격과정</figcaption>
+                    </figure>
+                </div>
+            </section>
+
+            <section class="network_section network_theme_sky">
+                <div class="network_section_head">
+                    <span>3</span>
+                    <h3>노인일자리지원사업</h3>
+                </div>
+                <div class="network_grid network_grid_half">
+                    <figure>
+                        <img src="<?php echo $figma_img_url; ?>/ai_training.png" alt="AI 실무역량활용 교육">
+                        <figcaption>AI 실무역량활용 교육</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="<?php echo $figma_img_url; ?>/integrated_care.png" alt="통합돌봄 실무자교육">
+                        <figcaption>통합돌봄 실무자교육</figcaption>
+                    </figure>
+                </div>
+            </section>
+
+            <section class="network_section network_theme_rose">
+                <div class="network_section_head">
+                    <span>4</span>
+                    <h3>노인일자리 홍보사업</h3>
+                </div>
+                <div class="network_grid network_grid_half">
+                    <figure>
+                        <img src="<?php echo $figma_img_url; ?>/pr_1.png" alt="노인일자리 홍보사업 교육">
+                        <figcaption>-</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="<?php echo $figma_img_url; ?>/pr_2.png" alt="노인일자리 홍보사업 강의">
+                        <figcaption>-</figcaption>
+                    </figure>
+                </div>
+            </section>
+        </div>
+        <?php } else if ($co_id == 'sub02_03') { ?>
         <?php $figma_img_url = G5_IMG_URL.'/figma_sub02_03'; ?>
         <div class="network_figma">
             <section class="network_section network_theme_amber">
