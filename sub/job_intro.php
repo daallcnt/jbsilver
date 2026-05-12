@@ -1,10 +1,10 @@
-<?
+<?php
 include_once("../common.php");
 $gr_id = "sub04";
 $co_id = "sub04_00";
 include_once(G5_PATH.'/head.php');
 ?>
-<link rel="stylesheet" href="<?php echo G5_CSS_URL; ?>/subpage.css?ver=job-intro-20260512">
+<link rel="stylesheet" href="/css/subpage.css?ver=job-intro-20260512">
 
 <div id="job_intro_figma">
 	<section class="ji_intro">
@@ -188,6 +188,6 @@ include_once(G5_PATH.'/head.php');
 	</section>
 </div>
 
-<?
+<?php
 include_once(G5_PATH.'/tail.php');
 ?>
