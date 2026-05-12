@@ -1,0 +1,97 @@
+@font-face {
+    font-family: 'NanumGothic';
+    font-style: normal;
+    font-weight: 100;
+    src: local('『'),
+        url('font/NanumGothicL.woff2') format('woff2'), 
+        url('font/NanumGothicL.woff') format('woff'),
+        url('font/NanumGothicL.ttf') format('truetype'),
+        url('font/NanumGothicL.otf') format('opentype'),
+        url('font/NanumGothicL.eot') format('embedded-opentype');
+}
+
+@font-face {
+    font-family: 'NanumGothic';
+    font-style: normal;
+    font-weight: 400;
+    src: local('『'),
+        url('font/NanumGothicR.woff2') format('woff2'), 
+        url('font/NanumGothicR.woff') format('woff'),
+        url('font/NanumGothicR.ttf') format('truetype'),
+        url('font/NanumGothicR.otf') format('opentype'),
+        url('font/NanumGothicR.eot') format('embedded-opentype');
+}
+
+@font-face {
+    font-family: 'NanumGothic';
+    font-style: normal;
+    font-weight: 700;
+    src: local('『'),
+        url('font/NanumGothicB.woff2') format('woff2'), 
+        url('font/NanumGothicB.woff') format('woff'),
+        url('font/NanumGothicB.ttf') format('truetype'),
+        url('font/NanumGothicB.otf') format('opentype'),
+        url('font/NanumGothicB.eot') format('embedded-opentype');
+}
+
+@font-face {
+    font-family: 'NanumGothic';
+    font-style: normal;
+    font-weight: 900;
+    src: local('『'),
+        url('font/NanumGothicEB.woff2') format('woff2'), 
+        url('font/NanumGothicEB.woff') format('woff'),
+        url('font/NanumGothicEB.ttf') format('truetype'),
+        url('font/NanumGothicEB.otf') format('opentype'),
+        url('font/NanumGothicEB.eot') format('embedded-opentype');
+}
+
+
+
+@font-face {
+    font-family: 'NotoSans';
+    font-style: normal;
+    font-weight: 100;
+    src: local('NotoSans'),
+        url('font/NotoSans-Thin.woff2') format('woff2'), 
+        url('font/NotoSans-Thin.woff') format('woff'),
+        url('font/NotoSans-Thin.ttf') format('truetype'),
+        url('font/NotoSans-Thin.otf') format('opentype'),
+        url('font/NotoSans-Thin.eot') format('embedded-opentype');
+}
+
+@font-face {
+    font-family: 'NotoSans';
+    font-style: normal;
+    font-weight: 400;
+    src: local('NotoSans'),
+        url('font/NotoSans-Regular.woff2') format('woff2'), 
+        url('font/NotoSans-Regular.woff') format('woff'),
+        url('font/NotoSans-Regular.ttf') format('truetype'),
+        url('font/NotoSans-Regular.otf') format('opentype'),
+        url('font/NotoSans-Regular.eot') format('embedded-opentype');
+}
+
+@font-face {
+    font-family: 'NotoSans';
+    font-style: normal;
+    font-weight: 700;
+    src: local('NotoSans'),
+        url('font/NotoSans-Bold.woff2') format('woff2'), 
+        url('font/NotoSans-Bold.woff') format('woff'),
+        url('font/NotoSans-Bold.ttf') format('truetype'),
+        url('font/NotoSans-Bold.otf') format('opentype'),
+        url('font/NotoSans-Bold.eot') format('embedded-opentype');
+}
+
+@font-face {
+    font-family: 'NotoSans';
+    font-style: normal;
+    font-weight: 900;
+    src: local('NotoSans'),
+        url('font/NotoSans-Black.woff2') format('woff2'), 
+        url('font/NotoSans-Black.woff') format('woff'),
+        url('font/NotoSans-Black.ttf') format('truetype'),
+        url('font/NotoSans-Black.otf') format('opentype'),
+        url('font/NotoSans-Black.eot') format('embedded-opentype');
+}

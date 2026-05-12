@@ -1,0 +1,52 @@
+@charset "utf-8";
+/* SIR 지운아빠 */
+.tbl_frm03 {margin:0 0 20px}
+.tbl_frm03 table {width:100%;border-collapse:collapse;border-spacing:0}
+.tbl_frm03 th {width:100px;padding:7px 13px;border:1px solid #e9e9e9;border-left:0;background:#f5f8f9;text-align:left;}
+.tbl_frm03 td {padding:7px 10px;border-top:1px solid #e9e9e9;border-bottom:1px solid #e9e9e9;background:transparent; line-height:150%}
+.tbl_frm03 textarea {padding:2px 2px 3px}
+.tbl_frm03 textarea {width:100%;height:100px}
+.tbl_frm03 a {text-decoration:none}
+
+.tbl_frm03 li {display:inline-block; width:24%}
+
+
+.btn_confirm01 {}
+.btn_confirm01 button {padding:0 15px;height:30px;border:0;background:#9eacc6;color:#fff}
+.btn_confirm01 a {display:inline-block;padding:0 15px;height:30px;background: #9eacc6;color: #fff;text-decoration:none;line-height:2.5em;vertical-align:middle}
+.btn_confirm01 a:focus {background:#555}
+
+@media (max-width:768px){
+	#bo_cate h2 {width:0;height:0;font-size:0;line-height:0;overflow:hidden}
+	#bo_cate ul {margin:5px 10px;padding-left:1px;zoom:1}
+	#bo_cate ul:after {display:block;visibility:hidden;clear:both;content:""}
+	#bo_cate li {float:left;margin-bottom:-1px;width:25%}
+	#bo_cate a {display:block;position:relative;margin-left:-1px;padding:5px 0;border:1px solid #ddd;background:#f7f7f7;color:#888;text-align:center;text-decoration:none;letter-spacing:-0.1em; }
+	#bo_cate a:focus, #bo_cate a:hover, #bo_cate a:active {text-decoration:none}
+	#bo_cate #bo_cate_on {z-index:2;border:1px solid #565e60;background:#fff;color:#565e60;font-weight:bold}
+	/* 게시판 읽기 */
+	.none01 {display:none;}
+	
+	/* 게시판 쓰기 */
+	#bo_w #wr_email, #bo_w #wr_homepage, #bo_w #wr_subject {width:100%}
+	#wr_email, #wr_homepage, #wr_subject, .wr_link {width:100%}	
+}
+@media (max-width:600px){
+	/* 게시판 읽기 */
+	.none02 {display:none;}	
+	
+	
+.tbl_frm03 .fc_input {width:90%;}
+.tbl_frm03 textarea {width:100%;height:100px}
+.tbl_frm03 .frm_file {display:block;margin-bottom:5px;width:100%}
+.tbl_frm03 .frm_info {display:block;padding:5px 0 0;color:#666;line-height:1.3em}
+
+}
+@media (max-width:480px){
+	/* 게시판 읽기 */
+	.none03 {display:none;}
+}
+@media (max-width:320px){
+	/* 게시판 읽기 */
+	.none04 {display:none;}
+}

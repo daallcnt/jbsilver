@@ -1,0 +1,56 @@
+<?php
+include_once('./_common.php');
+include_once(G5_LIB_PATH.'/json.lib.php');
+
+$gnu_config = get_gnupushapp_config();
+
+$reg_id = htmlspecialchars($_REQUEST['reg_id']);
+$mb_id = htmlspecialchars($_REQUEST['mb_id']);
+$masterpassword = htmlspecialchars($_REQUEST['masterpassword']);
+
+$str_mp = substr($gnu_config['masterpassword'], 0, 15);
+
+$response = "fail";
+
+$delete_cnt = sql_fetch(" select count(*) as 'cnt' from g5_gnupushapp_chatroom_ios WHERE gpcr_lastdate < date_add(date_format( now() , '%Y-%m-%d %k:%i:%s'), interval -10 second) ");
+if($delete_cnt['cnt'] > 0)
+{
+	sql_query("DELETE FROM g5_gnupushapp_chatroom_ios WHERE gpcr_lastdate < date_add(date_format( now() , '%Y-%m-%d %k:%i:%s'), interval -10 second) ", true);
+}
+
+if($str_mp == $masterpassword)
+{
+
+	$row_tmp = sql_fetch(" select count(*) as 'cnt' from g5_gnupushapp_chatroom_ios where gpci_reg_id = '{$reg_id}' and gpci_mb_id = '{$mb_id}' ");
+
+	if($row_tmp['cnt'] == 0)
+	{
+		$random = get_random_string_gnu(29);
+		sql_query(" INSERT INTO g5_gnupushapp_chatroom_ios 
+					set gpci_reg_id = '{$reg_id}', 
+					gpci_mb_id = '{$mb_id}',
+					gpci_random = '{$random}',
+					gpci_lastdate = '".G5_TIME_YMDHIS."' ", true);
+	}else{
+		$sql = " update g5_gnupushapp_chatroom_ios set gpci_lastdate = '".G5_TIME_YMDHIS."' where gpci_reg_id = '{$reg_id}' and gpci_mb_id = '{$mb_id}' ";
+		sql_query($sql);
+	}
+
+	$response = "ok";
+
+}
+
+$array = array("response" => $response);
+
+$json = "";
+
+$json = json_encode($array);
+
+header('Content-Type: application/json; charset=utf-8');
+header('Content-Length: ' . mb_strlen($json));
+echo $json;
+exit();
+
+
+
+?>

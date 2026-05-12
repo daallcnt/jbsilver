@@ -1,0 +1,52 @@
+@charset "utf-8";
+
+/* 내용관리 */
+#ctt {margin:10px 0;padding:0;background:#fff}
+.ctt_admin {text-align:right}
+#ctt header h1 {position:absolute;font-size:0;line-height:0;overflow:hidden}
+#ctt_con {padding:10px 0;line-height:1.6em}
+#ctt_himg img, #ctt_timg img, #ctt_con img {max-width:100%;height:auto}
+.ctt_img {text-align:center}
+
+/* Figma 재현: 노인일자리확충을 위한 네트워크사업 */
+#ctt.ctt_sub02_02 {margin:0;background:#fff}
+#ctt.ctt_sub02_02 #ctt_con {padding:0;line-height:1.4}
+
+.network_figma {width:100%;padding:0 24px;font-family:'NotoSans','NanumGothic',dotum,sans-serif}
+.network_section {padding-bottom:56px}
+.network_section_head {display:flex;align-items:center;gap:12px;height:66px;margin-bottom:24px;padding:17px 25px;border:1px solid;border-radius:12px}
+.network_section_head span {display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:50%;color:#fff;font-size:14px;line-height:20px;font-weight:bold}
+.network_section_head h3 {margin:0;color:#1f2937;font-size:20px;line-height:28px;font-weight:bold;letter-spacing:0;word-break:keep-all}
+.network_grid {display:grid;gap:24px}
+.network_grid_half {grid-template-columns:repeat(2, minmax(0, 1fr))}
+.network_grid_quarter {grid-template-columns:repeat(4, minmax(0, 1fr))}
+.network_grid figure {margin:0}
+#ctt_con .network_grid img {display:block;width:100%;border-radius:8px;object-fit:cover}
+#ctt_con .network_grid_half img {height:423px}
+#ctt_con .network_grid_quarter img {height:203px}
+.network_grid figcaption {padding-top:12px;color:#374151;font-size:18px;line-height:19.25px;font-weight:500;text-align:center;word-break:keep-all}
+
+.network_theme_amber .network_section_head {background:#fffbeb;border-color:#fde68a}
+.network_theme_amber .network_section_head span {background:#f59e0b}
+.network_theme_green .network_section_head {background:#ecfdf5;border-color:#a7f3d0}
+.network_theme_green .network_section_head span {background:#10b981}
+.network_theme_sky .network_section_head {background:#f0f9ff;border-color:#bae6fd}
+.network_theme_sky .network_section_head span {background:#0ea5e9}
+.network_theme_rose .network_section_head {background:#fff1f2;border-color:#fecdd3}
+.network_theme_rose .network_section_head span {background:#f43f5e}
+.network_theme_violet .network_section_head {background:#f5f3ff;border-color:#ddd6fe}
+.network_theme_violet .network_section_head span {background:#8b5cf6}
+.network_theme_teal .network_section_head {background:#f0fdfa;border-color:#99f6e4}
+.network_theme_teal .network_section_head span {background:#14b8a6}
+
+@media (max-width: 760px) {
+    .network_section {padding-bottom:36px}
+    .network_figma {padding:0}
+    .network_section_head {height:auto;min-height:58px;padding:14px 16px;border-radius:10px}
+    .network_section_head h3 {font-size:17px;line-height:24px}
+    .network_grid,
+    .network_grid_half,
+    .network_grid_quarter {grid-template-columns:1fr;gap:18px}
+    #ctt_con .network_grid img {height:auto}
+    .network_grid figcaption {font-size:15px;line-height:22px}
+}

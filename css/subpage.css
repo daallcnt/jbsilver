@@ -1,0 +1,255 @@
+@charset "utf-8";
+/* SIR 지운아빠 */
+
+/* 공통사용CSS */
+#sub_common {position:relative;float:left;width:100%;padding:0;margin-bottom:30px;font-size:13px; color:#333333;line-height:1.5em;text-align:justify;}
+#sub_common:after {display:block;visibility:hidden;clear:both;content:""}
+
+
+.sub_title {font-size:18px;font-weight:bold;color:#1454b8;padding-bottom:10px;}
+
+.sub_title_step1 {font-size:15px;font-weight:bold;color:#000000;padding-bottom:5px;}
+
+
+.tab01 {margin:0;font-size:13px;}
+.tab01 td {padding:8px;color:#222222;line-height:1.6em;}
+.tab01 th {padding:8px; border-top:2px solid #3c4d5d;background:#f3f3f3;line-height:1.6em;text-align:center;}
+
+.tab02 {margin:0;font-size:13px;}
+.tab02 td {padding:8px;color:#222222;line-height:1.6em;}
+.tab02 th {padding:8px; border-top:2px solid #3c4d5d;background:#f3f3f3;line-height:1.6em;text-align:center;}
+
+
+
+/*인사말*/
+
+.sub01_01_left {float:left;width:360px;}
+.sub01_01_right {float:left;width:690px;}
+
+.sub01_01_txt01 {font-size:22px; line-height:1.8em; color:#2a65c4;font-weight:bold;}
+.sub01_01_txt02 {font-size:15px; line-height:1.8em; color:#333333;}
+.sub01_01_txt03 {font-size:18px; line-height:1.6em; color:#000000;font-weight:bold;text-align:right;}
+
+
+/* 찾아오시는 길 */
+#daumRoughmapContainer1552984652368 {width:100% !important;}
+
+
+/* 수행기관 검색 */
+#jb_map {position:relative;min-width:1050px; min-height:400px;padding:0;text-align:center;margin-bottom:30px;}
+
+#jb_map .map01 {position:absolute;left:300px;top:87px;}
+#jb_map .map01 a:link{width:127px;height:75px;background:url('../img/map_img01.png') left top no-repeat;display:inline-block;}
+#jb_map .map01 a:hover{background:url('../img/map_img01_on.png') left top no-repeat;}
+
+
+#jb_map .map02 {position:absolute;left:404px;top:48px;}
+#jb_map .map02 a:link{width:91px;height:111px;background:url('../img/map_img02.png') left top no-repeat;display:inline-block;}
+#jb_map .map02 a:hover{background:url('../img/map_img02_on.png') left top no-repeat;}
+
+
+#jb_map .map03 {position:absolute;left:452px;top:56px;}
+#jb_map .map03 a:link{width:122px;height:211px;background:url('../img/map_img03.png') left top no-repeat;display:inline-block;}
+#jb_map .map03 a:hover{background:url('../img/map_img03_on.png') left top no-repeat;}
+
+#jb_map .map04 {position:absolute;left:535px;top:100px;}
+#jb_map .map04 a:link{width:114px;height:168px;background:url('../img/map_img04.png') left top no-repeat;display:inline-block;}
+#jb_map .map04 a:hover{background:url('../img/map_img04_on.png') left top no-repeat;}
+
+#jb_map .map05 {position:absolute;left:616px;top:85px;}
+#jb_map .map05 a:link{width:125px;height:115px;background:url('../img/map_img05.png') left top no-repeat;display:inline-block;}
+#jb_map .map05 a:hover{background:url('../img/map_img05_on.png') left top no-repeat;}
+
+#jb_map .map06 {position:absolute;left:353px;top:146px;}
+#jb_map .map06 a:link{width:126px;height:102px;background:url('../img/map_img06.png') left top no-repeat;display:inline-block;}
+#jb_map .map06 a:hover{background:url('../img/map_img06_on.png') left top no-repeat;}
+
+#jb_map .map07 {position:absolute;left:460px;top:153px;}
+#jb_map .map07 a:link{width:65px;height:70px;background:url('../img/map_img07.png') left top no-repeat;display:inline-block;}
+#jb_map .map07 a:hover{background:url('../img/map_img07_on.png') left top no-repeat;}
+
+#jb_map .map08 {position:absolute;left:281px;top:197px;}
+#jb_map .map08 a:link{width:120px;height:92px;background:url('../img/map_img08.png') left top no-repeat;display:inline-block;}
+#jb_map .map08 a:hover{background:url('../img/map_img08_on.png') left top no-repeat;}
+
+#jb_map .map09 {position:absolute;left:362px;top:213px;}
+#jb_map .map09 a:link{width:126px;height:120px;background:url('../img/map_img09.png') left top no-repeat;display:inline-block;}
+#jb_map .map09 a:hover{background:url('../img/map_img09_on.png') left top no-repeat;}
+
+#jb_map .map10 {position:absolute;left:480px;top:207px;}
+#jb_map .map10 a:link{width:112px;height:126px;background:url('../img/map_img10.png') left top no-repeat;display:inline-block;}
+#jb_map .map10 a:hover{background:url('../img/map_img10_on.png') left top no-repeat;}
+
+#jb_map .map11 {position:absolute;left:566px;top:177px;}
+#jb_map .map11 a:link{width:109px;height:152px;background:url('../img/map_img11.png') left top no-repeat;display:inline-block;}
+#jb_map .map11 a:hover{background:url('../img/map_img11_on.png') left top no-repeat;}
+
+#jb_map .map12 {position:absolute;left:272px;top:285px;}
+#jb_map .map12 a:link{width:110px;height:112px;background:url('../img/map_img12.png') left top no-repeat;display:inline-block;}
+#jb_map .map12 a:hover{background:url('../img/map_img12_on.png') left top no-repeat;}
+
+#jb_map .map13 {position:absolute;left:400px;top:295px;}
+#jb_map .map13 a:link{width:152px;height:104px;background:url('../img/map_img13.png') left top no-repeat;display:inline-block;}
+#jb_map .map13 a:hover{background:url('../img/map_img13_on.png') left top no-repeat;}
+
+#jb_map .map14 {position:absolute;left:509px;top:293px;}
+#jb_map .map14 a:link{width:159px;height:106px;background:url('../img/map_img14.png') left top no-repeat;display:inline-block;}
+#jb_map .map14 a:hover{background:url('../img/map_img14_on.png') left top no-repeat;}
+
+
+/* 주요업무 */
+.part_space {margin-bottom:40px;}
+
+.sub02_txt01 {font-size:22px; font-weight:bold; color:#0070be; line-height:1.6em;padding-bottom:10px;}
+.sub02_txt02 {font-size:18px; font-weight:bold; color:#000000; line-height:1.6em;}
+.sub02_txt03 {font-size:15px; color:#555555; line-height:1.6em;}
+.sub02_img {width:100%;padding: 10px 0;}
+
+.head_step01 {margin-left:15px !important;}
+.head_step01 > li {list-style-image:url('../img/head.gif');}
+
+.head_step02 {margin-left:15px !important;}
+.head_step02 > li {list-style-image:url('../img/head01.gif');}
+
+
+#tabmap{margin:0px}
+#tabmap h2 {position:absolute;font-size:0;line-height:0;overflow:hidden;}
+#tabmap ul {margin-bottom:30px;padding-left:1px;zoom:1;font-size:14px;list-style:none}
+#tabmap ul:after {display:block;visibility:hidden;clear:both;content:""}
+#tabmap li {float:left;margin-top:-1px; width:25%}
+#tabmap a {display:block;position:relative;margin-left:-1px;padding:0px; color:#888;text-align:center;letter-spacing:-0.1em;line-height:2.4em;cursor:pointer;border:1px solid #ddd;}
+#tabmap a:focus, #tabmap a:hover, #tabmap a:active {text-decoration:none}
+#tabmap #tabmap_on {z-index:2;border:1px solid #0069b6;background:#0069b6;color:#fff;font-weight:700}
+#tabmap a:hover {z-index:2;border:1px solid #0069b6;background:#fff;color:#0069b6;}
+
+
+
+/* 취업정보 */
+.sub03_02_txt01 {font-size:24px;font-weight:bold;color:#000000;}
+.sub03_02_txt02 {font-size:18px;color:#555555;}
+.sub03_02_txt03 {font-size:22px;font-weight:bold;color:#2c6ce3;padding-bottom:25px;}
+.sub03_02_txt04 {font-size:15px;color:#3d3d3d;line-height:1.6em;padding:20px 0;letter-spacing:-0.05em;}
+
+
+
+#sub03_02 {position:relative;min-width:1050px;padding:0;text-align:center;}
+#sub03_02:after {display:block;visibility:hidden;clear:both;content:""}
+#sub03_02 li {display:inline-block;list-style:none;margin:0 5px;padding:30px 0; border:1px solid #dddddd;width:330px;}
+
+	.round_btn01 {display:inline-block;background:#ffffff;border-radius:18px;border:1px solid #6ba2d5;width:100px;font-size:13px;line-height:35px;font-weight:bold;}
+	.round_btn02 {display:inline-block;background:#ffffff;border-radius:18px;border:1px solid #6ba2d5;width:140px;font-size:13px;line-height:35px;font-weight:bold;}
+
+
+#sub03_03 {position:relative;min-width:1050px;padding:0;text-align:center;}
+#sub03_03:after {display:block;visibility:hidden;clear:both;content:""}
+#sub03_03 li {display:inline-block;list-style:none;margin:0 2px;padding:30px 0; border:1px solid #dddddd;width:200px;}
+
+
+
+
+.btnxx1{text-decoration:none;background-color:#ea192d;overflow:visible;margin:0;padding:0 35px;height:50px;line-height:50px;vertical-align:middle;text-align:center;
+	display:inline-block;color:#fff;font-size:1.3em;border-radius:25px;font-weight:bold;letter-spacing:-0.01em;}
+
+
+.sub06_txt01 {font-size:18px; font-weight:bold; color:#0091ed; line-height:1.6em;}
+.sub06_txt02 {font-size:15px; color:#555555; line-height:1.8em;}
+
+
+
+
+
+
+/*이용약관*/
+.useLaw{font-size:1.12em;color:#666;line-height:24px;text-align:justify;letter-spacing:-0.05em;}
+.useLaw h3{margin:10px 0 !important;font-size:1.2em;color:#000}
+.useLaw h4 {margin-top:5px;}
+
+.useLaw ol{padding:0;margin:0;list-style:none;}
+.usein {margin-left:15px !important;}
+.usein2{text-indent:3px;margin-left:30px !important;}
+.usein > li {list-style-image:url('../img/dashY.gif')}
+.usein2 > li{list-style-image:url('../img/pointbox.gif')}
+
+
+/*개인정보처리방침*/
+.privercy{font-size:1.12em;color:#666;line-height:24px;text-align:justify;letter-spacing:-0.05em;}
+.privercy h3{margin:10px 0 !important;font-size:1.2em;color:#000}
+.privercy h4 {margin-top:5px;}
+.privercy ul{padding:0;margin:0;list-style:none;}
+.prive {margin-left:15px !important;}
+.prive > li {list-style-image:url('../img/dashY.gif')}
+
+
+/*이메일무단수집거부*/
+.rejection {font-size:1.12em;color:#666;line-height:24px;text-align:justify;letter-spacing:-0.05em;}
+.rejection h3{margin:10px 0 !important;font-size:1.2em;color:#000}
+.rejection ol{padding:0;margin:0;list-style:none;}
+.rejec {margin-left:15px !important;}
+.rejec > li {list-style-image:url('../img/dashY.gif')}
+
+
+
+
+/* 회원탈퇴 */
+.sub12_01_btn {background:#d13f4a;color:#ffffff;padding:15px 30px;font-size:18px; font-weight:bold;border-radius:30px;}
+
+
+
+/* 기본테이블 */
+.edu_head01 {margin:0 0 10px;font-size:13px;}
+.edu_head01 caption {padding:0;font-size:0;line-height:0;overflow:hidden}
+.edu_head01 thead th {padding:10px 0;font-weight:normal;text-align:center;border-bottom:1px solid #ddd;background:#fafafa;height:40px}
+.edu_head01 thead th input {vertical-align:top} /* middle 로 하면 게시판 읽기에서 목록 사용시 체크박스 라인 깨짐 */
+.edu_head01 tfoot th, .edu_head01 tfoot td {padding:10px 0;border-top:1px solid #c1d1d5;border-bottom:1px solid #c1d1d5;background:#d7e0e2;text-align:center}
+.edu_head01 tbody th {padding:8px 0;border-bottom:1px solid #e8e8e8}
+.edu_head01 td {color:#666;background:#fff;padding:10px 5px;border-top:1px solid #ecf0f1;line-height:1.4em;height:60px;word-break:break-all}
+.edu_head01 tbody tr:hover td{background:#fafafa;}
+.edu_head01 a:hover {text-decoration:underline}
+
+
+/* 폼 테이블 */
+.edu_frm01 {margin:0 0 20px;font-size:13px;}
+.edu_frm01 table {width:100%;border-collapse:collapse;border-spacing:0}
+.edu_frm01 th {width:90px;padding:15px 13px;border:1px solid #e9e9e9;border-left:0;background:#f5f8f9;text-align:left}
+.edu_frm01 td {padding:15px 10px;border-top:1px solid #e9e9e9;border-bottom:1px solid #e9e9e9;background:transparent}
+.wr_content textarea,.edu_frm01 textarea,.form_01 textarea, .frm_input {border:1px solid #ccc;background:#fff;color:#000;vertical-align:middle;border-radius:3px;padding:5px;
+-webkit-box-shadow: inset 0 1px 1px rgba(0, 0, 0, .075);
+-moz-box-shadow: inset 0 1px 1px rgba(0, 0, 0, .075);
+box-shadow: inset 0 1px 1px rgba(0, 0, 0, .075);
+}
+.edu_frm01 textarea {padding:2px 2px 3px}
+.frm_input {height:40px;}
+
+.full_input{width:100%}
+.half_input{width:49.5%}
+.edu_frm01 textarea, .write_div textarea {width:100%;height:100px}
+.edu_frm01 a {text-decoration:none}
+.edu_frm01 .frm_file {display:block;margin-bottom:5px}
+.edu_frm01 .frm_info {display:block;padding:0 0 5px;line-height:1.4em}
+
+
+/* 테이블 항목별 정의 */
+.edu_td_board {width:120px;text-align:center}
+.edu_td_board01 {width:250px;text-align:center}
+.edu_td_mng {width:90px;text-align:center}
+.edu_td_price {width:100px;text-align:center}
+.edu_td_mem {width:80px;text-align:center}
+.edu_td_enter {width:80px;text-align:center}
+
+
+.edu_td_category {width:80px;text-align:center}
+.edu_td_chk {width:30px;text-align:center}
+.edu_td_date {width:60px;text-align:center}
+.edu_td_datetime {width:110px;text-align:center}
+.edu_td_group {width:80px;text-align:center}
+.edu_td_mb_id {width:100px;text-align:center}
+.edu_td_mng {width:80px;text-align:center}
+.edu_td_name {width:100px;text-align:left}
+.edu_td_nick {width:100px;text-align:center}
+.edu_td_num {width:50px;text-align:center}
+.edu_td_numbig {width:80px;text-align:center}
+.edu_td_stat {width:60px;text-align:center}
+
+
+
+

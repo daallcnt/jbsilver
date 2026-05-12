@@ -1,0 +1,3417 @@
+<?php
+if (!defined('_GNUBOARD_')) exit;
+
+function iap_success()
+{
+	//인앱결제 성공시 해야 할 작업 product아이디에 따라 해당 작업을 하고 성공메시지를 입력해주세요.
+
+	if ($_SESSION['inapp_product_id']) {
+
+		$success_message = "포인트 xx가 지급되었습니다.";
+	}
+	return $success_message;
+}
+
+function get_my_gnupushspp_subscribe($bo_table)
+{
+	global $g5;
+	global $config;
+	$gnu_config = get_gnupushapp_config();
+
+	if ($_SESSION['reg_id']) {
+		$reg_id = $_SESSION['reg_id'];
+
+		$row_1 = get_device_info_by_regid($reg_id);
+		if ($row_1) {
+			$sync = $row_1['gpr_sync'];
+			if ($sync != "N") $mb_id = $row_1['gpr_mb_id'];
+			$go_for_it = true;
+			$board_config = sql_fetch(" select * from {$g5['board_table']} where bo_table = '$bo_table' ");
+			if (is_array($gnu_config['no_use_module_srls']) && in_array($bo_table, $gnu_config['no_use_module_srls'])) $go_for_it = false;
+			if (is_array($gnu_config['only_admin_push_module_srls']) && in_array($bo_table, $gnu_config['only_admin_push_module_srls'])) $go_for_it = false;
+			if (is_array($gnu_config['notice_module_srls']) && in_array($bo_table, $gnu_config['notice_module_srls'])) $go_for_it = false;
+			if (is_array($gnu_config['group_module_srls']) && in_array($bo_table, $gnu_config['group_module_srls'])) {
+				if ($sync_data == 'N') {
+					$go_for_it = false;
+				} else {
+					$gr_id_pu = $board_config['gr_id'];
+					$res_this = sql_fetch("select count(*) as 'cnt' from {$g5['group_member_table']} where gr_id = '$gr_id_pu' and mb_id = '$mb_id'");
+					if ($res_this['cnt'] == 0) {
+
+						$array_mb_id = array();
+						if ($board_config['bo_admin']) {
+							$array_m_list = explode(",", $board_config['bo_admin']);
+							foreach ($array_m_list as $bo_admin_mb) {
+								array_push($array_mb_id, $bo_admin_mb);
+							}
+						}
+
+						$group_config = sql_fetch(" select * from {$g5['group_table']} where gr_id = '$gr_id_pu' ");
+						if ($group_config['gr_admin']) {
+							$array_m_list = explode(",", $group_config['gr_admin']);
+							foreach ($array_m_list as $bo_admin_mb) {
+								array_push($array_mb_id, $bo_admin_mb);
+							}
+						}
+
+						if ($gnu_config['build_sort'] == 'A') {
+							if ($config['as_admin']) {
+								$array_m_list = explode(",", $config['as_admin']);
+								foreach ($array_m_list as $bo_admin_mb) {
+									array_push($array_mb_id, $bo_admin_mb);
+								}
+							}
+						}
+
+						$admin_result = sql_query("select mb_id from {$g5['member_table']} where mb_level = 10");
+						for ($i = 0; $admin_mb_id = sql_fetch_array($admin_result); $i++) {
+							array_push($array_mb_id, $admin_mb_id['mb_id']);
+						}
+
+						if (!in_array($mb_id, $array_mb_id)) {
+							$go_for_it = false;
+						}
+					}
+				}
+			}
+
+			if ($go_for_it) {
+				$level = 1;
+				$level_point = 1;
+
+				if ($sync != "N") {
+					$member = get_member($mb_id);
+					$level = intval($member['mb_level']);
+					if ($gnu_config['build_sort'] == "A") {
+						$level_point = intval($member['as_level']);
+					}
+				}
+
+				$grnt = false;
+				if ($gnu_config['board_grant'] == "Y" || $gnu_config['board_grant'] == "D") {
+					if ($gnu_config['build_sort'] == "A") {
+						if ($board_config['as_min'] != 0 && $board_config['as_max'] != 0) {
+							if ($level_point < $board_config['as_min']) $grnt = true;
+							if ($level_point > $board_config['as_max']) $grnt = true;
+						} elseif ($board_config['as_grade'] > 1 || $board_config['as_equal'] != 0) {
+							if ($board_config['as_equal'] == 0) {
+								if ($level < $board_config['as_grade']) $grnt = true;
+							} else {
+								if ($level != $board_config['as_grade']) $grnt = true;
+							}
+						} else {
+							if ($level < $board_config[$gnu_config['board_grant_c']]) $grnt = true;
+						}
+					} else {
+						if ($level < $board_config[$gnu_config['board_grant_c']]) $grnt = true;
+					}
+				}
+
+				//구독설정
+				if (!$grnt) {
+					$query = "select count(*) as cnt from g5_gnupushapp_subscribe where gss_bo_table = '$bo_table' and gss_reg_id = '$reg_id' and gss_is_youngcart = 'N' ";
+					$row = sql_fetch($query);
+					if ($row['cnt'] > 0) {
+						return "on";
+					} else {
+						return "off";
+					}
+				} else {
+					if ($sync != "N") {
+						return "grant";
+					} else {
+						return "login";
+					}
+				}
+			} else {
+				return "nouse";
+			}
+		}
+	}
+	return "none";
+}
+
+function getBadge_by_mb_id($for_b_mb_id)
+{
+	global $g5;
+	$gnu_config = get_gnupushapp_config();
+
+	$count_badge = 0;
+
+	if ($gnu_config['build_sort'] == 'A') {
+		$member_rc = get_member($for_b_mb_id);
+		$count_badge = $member_rc['as_response'] + $member_rc['as_memo'];
+	} elseif ($gnu_config['build_sort'] == 'E') {
+		// 원본글 작성자의 반응글 적용
+		$row = sql_fetch("select respond from {$g5['eyoom_member']} where mb_id = '{$for_b_mb_id}'", false);
+		$sql = " select count(*) as cnt from {$g5['memo_table']} where me_recv_mb_id = '{$for_b_mb_id}' and me_read_datetime = '0000-00-00 00:00:00' ";
+		$row_memo = sql_fetch($sql);
+		$count_badge = $row['respond'] + $row_memo['cnt'];
+	} else {
+		if ($gnu_config["pushmsg"] == "Y") {
+			$query = "select count(*) as cnt from {$g5['g5_srd_pushmsg']} where mb_id = '{$for_b_mb_id}' and (msg_check != 'd' and msg_check = 'n') ";
+			$result_pm = sql_fetch($query);
+			$count_badge = $result_pm['cnt'];
+		}
+	}
+
+	return $count_badge;
+}
+
+function getBadgeString_Plus_by_mb_id($bo_table, $wr_id, $mb_id)
+{
+	global $g5;
+	$gnu_config = get_gnupushapp_config();
+
+	$count_badge = 0;
+
+	if ($gnu_config['build_sort'] == 'A') {
+		if (!$bo_table || !$wr_id) return;
+		$where = " mb_id = '$mb_id' and bo_table = '$bo_table' and wr_id = '$wr_id' and type = '2' ";
+		$row = sql_fetch(" select id from {$g5['apms_response']} where $where and confirm <> '1' ", false);
+		$is_update = ($row['id']) ? true : false;
+
+		$count_badge = getBadge_by_mb_id($mb_id);
+
+		if (!$is_update) $count_badge++;
+	} else {
+		$count_badge = getBadge_by_mb_id($mb_id);
+		$count_badge++;
+	}
+
+	return $count_badge;
+}
+
+function getBadge_by_reg_id($for_b_reg_id)
+{
+	$device_info = get_device_info_by_regid($reg_id);
+	$count_badge = 0;
+	if ($device_info) {
+		if ($device_info['gpr_sync'] != "N") $count_badge = getBadge_by_mb_id($device_info['gpr_mb_id']);
+	}
+	return $count_badge;
+}
+
+function insert_Notification_list($field, $bo_table, $wr_id, $subject, $address, $mb_id, $my_id = '', $my_name = '', $c_id = '')
+{
+	global $g5;
+
+	$gnu_config = get_gnupushapp_config();
+
+	//구독게시판의 새글과 댓글, 내가 댓글단 글의 새 댓글, 공지사항만 해당됨 
+	if ($gnu_config['build_sort'] == 'A') {
+
+		if (!$mb_id || ($mb_id && $mb_id == $my_id)) return;
+
+		$is_update = false;
+
+		if ($field != "notice") {
+
+			if (!$bo_table || !$wr_id) return;
+			$where = " mb_id = '$mb_id' and bo_table = '$bo_table' and wr_id = '$wr_id' and type = '2' ";
+			$set = " bo_table = '$bo_table', wr_id = '$wr_id', type = '2', target_url = '$address', ";
+			$row = sql_fetch(" select id from {$g5['apms_response']} where $where and confirm <> '1' ", false);
+			$is_update = ($row['id']) ? true : false;
+		} else {
+
+			$set = " bo_table = '', wr_id = '', type = '7', target_url = '$address', ";
+		}
+
+		// Comment
+		$co_sql = ($c_id) ? ", co_id = '{$c_id}'" : "";
+
+		if ($is_update) {
+			$my_sql = ($my_id && $my_name) ? ", my_id = '$my_id', my_name = '$my_name'" : ""; //아이디와 이름도 업데이트
+			sql_query(" update {$g5['apms_response']} set {$field}_cnt = {$field}_cnt + 1, regdate = '" . G5_TIME_YMDHIS . "' $my_sql $co_sql where id = '{$row['id']}' ", false);
+
+			$re_id = $row['id'];
+		} else {
+			$set .= " mb_id = '$mb_id', my_id = '$my_id', my_name = '$my_name', subject = '" . addslashes($subject) . "',";
+			if ($field != "notice") {
+				sql_query(" insert into {$g5['apms_response']} set $set {$field}_cnt = '1', regdate = '" . G5_TIME_YMDHIS . "' $co_sql ", false);
+			} else {
+				sql_query(" insert into {$g5['apms_response']} set $set regdate = '" . G5_TIME_YMDHIS . "' $co_sql ", false);
+			}
+
+			//내글반응수 업데이트
+			sql_query(" update {$g5['member_table']} set as_response = as_response + 1 where mb_id = '{$mb_id}' ", false);
+		}
+	} elseif ($gnu_config["pushmsg"] == "Y") {
+
+		$gpr_mb_id = $mb_id;
+		$mbto_id = $my_id;
+		$msg_wdate = G5_TIME_YMDHIS;
+		$msg_check  = 'n';
+		$push_nick = $my_name;
+		$msg_subject = $subject;
+		$msg_link = $address;
+		$sql_insert = "
+			insert into {$g5['g5_srd_pushmsg']} ( msg_check, mb_id, mbto_id, msg_subject, msg_link, msg_type, msg_wdate) 
+			value (
+				'{$msg_check}' ,
+				'{$gpr_mb_id}' ,
+				'{$mbto_id}' ,
+				'{$msg_subject}' ,
+				'{$msg_link}' ,
+				'board' ,
+				'{$msg_wdate}' 
+			)
+		";
+		@sql_query($sql_insert);
+	} elseif ($gnu_config['build_sort'] == 'E') {
+
+		global $member, $anonymous, $eb;
+
+		// 익명글
+		if ($anonymous) {
+			$my_id = 'anonymous';
+			$my_name = '익명';
+		}
+
+		if ($field == "notice") {
+			$type = "notice";
+			$bo_table = "none";
+		} else {
+			if ($c_id) {
+				$type = "subscriptioncmt";
+			} else {
+				$type = "subscription";
+			}
+		}
+
+		$wr_cmt = ($c_id) ? $c_id : 0;
+
+		$set = "
+			bo_table	= '$bo_table',
+			pr_id		= '$wr_id',
+			wr_id		= '$wr_id',
+			wr_cmt		= '$wr_cmt',
+			wr_mb_id	= '$mb_id',
+			mb_id		= '" . $my_id . "',
+			mb_name		= '" . $my_name . "',
+			re_type		= '$type',
+			target_url = '$address',
+			wr_subject	= '" . $subject . "',
+		";
+		$where = "
+			wr_mb_id = '$wr_id' and
+			bo_table = '$bo_table' and
+			pr_id = '$pr_id' and
+			re_type = '$type'
+		";
+
+		// 열람하지 않은 내글반응이 이미 있는지 체크
+		$row = sql_fetch(" select rid from {$g5['eyoom_respond']} where $where and re_chk <> '1' order by rid desc ", false);
+		$rid = $row['rid'];
+
+		if ($rid) {
+			// 열람하지 않은 내글반응이 이미 있을 경우, 카운트만 올림
+			sql_query("update {$g5['eyoom_respond']} set re_cnt=re_cnt+1, regdt='" . G5_TIME_YMDHIS . "' where rid='{$rid}'", false);
+		} else {
+			// 내글 반응 등록
+			$insert = " insert into {$g5['eyoom_respond']} set $set regdt = '" . G5_TIME_YMDHIS . "' ";
+			sql_query($insert, false);
+			$rid = sql_insert_id();
+
+			// 원본글 작성자의 반응글 적용
+			$row = sql_fetch("select mb_id from {$g5['eyoom_member']} where mb_id = '{$mb_id}'", false);
+			if ($row['mb_id']) {
+				sql_query(" update {$g5['eyoom_member']} set respond = respond + 1 where mb_id = '{$mb_id}' ", false);
+			}
+		}
+
+		// 푸시등록
+		$user = sql_fetch("select onoff_push_respond from {$g5['eyoom_member']} where mb_id = '{$mb_id}'");
+		if ($user['onoff_push_respond'] == 'on') $eb->set_push("respond", $rid, $mb_id, $my_name, $type);
+	}
+}
+
+function quick_send_regids($reg_ids, $title, $content, $address, $etc, $sort, $response = false, $typeP = "normal", $async = false)
+{
+	$gnu_config = get_gnupushapp_config();
+
+	if ($gnu_config["use"] == "N") return;
+	if (!is_array($reg_ids)) return;
+
+	if ($async) {
+		$data = array("reg_ids" => $reg_ids, "title" => $title, "content" => $content, "address" => $address, "etc" => $etc, "sort" => $sort, "response" => $response, "typeP" => $typeP);
+		$gp_target_url = $address;
+		$gp_target_title = addslashes(cut_str($title, 50, ''));
+		gnu_send_socket($data, 'quicksend', 'quicksendr', $gp_target_url, $gp_target_title);
+	} else {
+
+		$a_reg_ids = array_unique(array_values(array_map('trim', $reg_ids)));
+
+		$total_push = 0;
+		$success_push = 0;
+		$error_push = 0;
+		$remove_ids = array();
+
+		$etc_array = explode("ab&#ba", $etc);
+
+		if (!$sort) $sort = "must";
+
+		// sort는 4가지 종류 : newpost, notice, must, youngcart
+
+		$sql_setting = '';
+
+		if ($sort != "must") {
+			$sql_setting = "and gpr_setting_" . $sort . " = 'Y' ";
+		}
+
+		$mb_ids = "";
+
+		for ($i = 0; $i < count($a_reg_ids); $i++) {
+			$row_tmp = sql_fetch("select count(*) as 'cnt' from g5_gnupushapp_gcmregid where gpr_reg_id = '{$a_reg_ids[$i]}' $sql_setting ");
+			if ($row_tmp['cnt'] == 0) {
+				if (($key = array_search($a_reg_ids[$i], $a_reg_ids)) !== false) {
+					unset($a_reg_ids[$key]);
+				}
+			}
+		}
+
+		$devices_select1 = array();
+		$devices_newAndroid_select1 = array();
+		$newRegIdsA1 = array();
+		$newRegIdsIbs = array(); //badge & sound
+		$newRegIdsIbm = array(); //badge & mute
+		$newRegIdsIs = array(); // sound
+		$newRegIdsIm = array(); // mute
+		$newRegIdsId = array(); // chat data
+
+		$chatpush = "true";
+		$array_mb_id = array();
+
+		$room_id = "0";
+		if ($typeP == "chat") {
+			$room_id = $etc_array[8];
+		}
+
+		for ($i = 0; $i < count($a_reg_ids); $i++) {
+			$j = $i + 1;
+			$row = get_device_info_by_regid($a_reg_ids[$i]);
+			if ($row['gpr_sync'] != 'N' && $gnu_config["mypushlist"] == "Y") {
+
+				if ($row['gpr_sort'] == 'I') {
+					$other_setting_array = unserialize($row['gpr_other_setting']);
+				}
+
+				if ($row['gpr_setting_chat'] == 'N') $chatpush = "false";
+
+
+				if ($gnu_config['build_sort'] == 'A' || $gnu_config['build_sort'] == 'E' || $gnu_config["pushmsg"] == "Y") {
+					$count_badge = getBadge_by_mb_id($row['gpr_mb_id']);
+					$count_badge++;
+					$stringBadge = "badgeN" . strval($count_badge);
+					if ($row['gpr_sort'] == 'I') {
+
+						if ($typeP == "chat") {
+
+							$row_tmp = sql_fetch(" select count(*) as 'cnt' from g5_gnupushapp_chatroom_ios where gpci_reg_id = '{$row['gpr_reg_id']}' and cr_ix = '$room_id' ");
+
+							if ($row_tmp['cnt'] == 0) {
+								if ($chatpush == 'true') {
+									if ($other_setting_array[0] == 'sound') {
+										$newRegIdsIbs[$stringBadge][] = $row['gpr_reg_id'];
+									} else {
+										$newRegIdsIbm[$stringBadge][] = $row['gpr_reg_id'];
+									}
+								}
+							} else {
+								$newRegIdsId[floor($j / 1000)][] = $row['gpr_reg_id'];
+							}
+						} else if ($typeP == "read") {
+
+							$row_tmp = sql_fetch(" select count(*) as 'cnt' from g5_gnupushapp_chatroom_ios where gpci_reg_id = '{$row['gpr_reg_id']}' and cr_ix = '$room_id' ");
+							if ($row_tmp['cnt'] != 0) {
+								$newRegIdsId[floor($j / 1000)][] = $row['gpr_reg_id'];
+							}
+						} else {
+							if ($other_setting_array[0] == 'sound') {
+								$newRegIdsIbs[$stringBadge][] = $row['gpr_reg_id'];
+							} else {
+								$newRegIdsIbm[$stringBadge][] = $row['gpr_reg_id'];
+							}
+						}
+					} else {
+						if ($row['gpr_os_version'] >= 8) {
+							$devices_newAndroid_select1[$stringBadge][] = $row['gpr_reg_id'];
+						} else {
+							$devices_select1[floor($j / 1000)][] = $row['gpr_reg_id'];
+						}
+					}
+				} else {
+					if ($row['gpr_sort'] == 'I') {
+
+						if ($typeP == "chat") {
+
+							$row_tmp = sql_fetch(" select count(*) as 'cnt' from g5_gnupushapp_chatroom_ios where gpci_reg_id = '{$row['gpr_reg_id']}' and cr_ix = '$room_id' ");
+
+							if ($row_tmp['cnt'] == 0) {
+								if ($chatpush == 'true') {
+									if ($other_setting_array[0] == 'sound') {
+										$newRegIdsIs[floor($j / 1000)][] = $row['gpr_reg_id'];
+									} else {
+										$newRegIdsIm[floor($j / 1000)][] = $row['gpr_reg_id'];
+									}
+								}
+							} else {
+								$newRegIdsId[floor($j / 1000)][] = $row['gpr_reg_id'];
+							}
+						} else if ($typeP == "read") {
+							$row_tmp = sql_fetch(" select count(*) as 'cnt' from g5_gnupushapp_chatroom_ios where gpci_reg_id = '{$row['gpr_reg_id']}' and cr_ix = '$room_id' ");
+							if ($row_tmp['cnt'] != 0) {
+								$newRegIdsId[floor($j / 1000)][] = $row['gpr_reg_id'];
+							}
+						} else {
+
+							if ($other_setting_array[0] == 'sound') {
+								$newRegIdsIs[floor($j / 1000)][] = $row['gpr_reg_id'];
+							} else {
+								$newRegIdsIm[floor($j / 1000)][] = $row['gpr_reg_id'];
+							}
+						}
+					} else {
+						$devices_select1[floor($j / 1000)][] = $row['gpr_reg_id'];
+					}
+				}
+
+				if ($etc_array[4] == $title) {
+					$msg_subject = $etc_array[4];
+				} else {
+					$msg_subject = $etc_array[4] . " [" . $title . "]";
+				}
+				if ($response) {
+					if (!is_array($array_mb_id) || !in_array($row['gpr_mb_id'], $array_mb_id)) {
+						insert_Notification_list('notice', '', '', $msg_subject, $address, $row['gpr_mb_id'], '', '', '');
+						array_push($array_mb_id, $row['gpr_mb_id']);
+					}
+				}
+			} else {
+				if ($row['gpr_sort'] == 'I') {
+
+					if ($typeP == "chat") {
+
+						$row_tmp = sql_fetch(" select count(*) as 'cnt' from g5_gnupushapp_chatroom_ios where gpci_reg_id = '{$row['gpr_reg_id']}' and cr_ix = '$room_id' ");
+
+						if ($row_tmp['cnt'] == 0) {
+							if ($chatpush == 'true') {
+								if ($other_setting_array[0] == 'sound') {
+									$newRegIdsIs[floor($j / 1000)][] = $row['gpr_reg_id'];
+								} else {
+									$newRegIdsIm[floor($j / 1000)][] = $row['gpr_reg_id'];
+								}
+							}
+						} else {
+							$newRegIdsId[floor($j / 1000)][] = $row['gpr_reg_id'];
+						}
+					} else if ($typeP == "read") {
+
+						$row_tmp = sql_fetch(" select count(*) as 'cnt' from g5_gnupushapp_chatroom_ios where gpci_reg_id = '{$row['gpr_reg_id']}' and cr_ix = '$room_id' ");
+						if ($row_tmp['cnt'] != 0) {
+							$newRegIdsId[floor($j / 1000)][] = $row['gpr_reg_id'];
+						}
+					} else {
+						if ($other_setting_array[0] == 'sound') {
+							$newRegIdsIs[floor($j / 1000)][] = $row['gpr_reg_id'];
+						} else {
+							$newRegIdsIm[floor($j / 1000)][] = $row['gpr_reg_id'];
+						}
+					}
+				} else {
+					$devices_select1[floor($j / 1000)][] = $row['gpr_reg_id'];
+				}
+			}
+		}
+
+		$rnum = get_random_string_gnu('5');
+		$keypass = substr(md5(date('YmdHis')), 0, 25) . $rnum;
+
+		$devices_selectIphone = array();
+
+		$send = gnupushsend($devices_select1, $title, $content, $address, $etc, $newRegIdsIbs, $newRegIdsIbm, $newRegIdsIs, $newRegIdsIm, $devices_selectIphone, $newRegIdsId, $typeP, "important", $devices_newAndroid_select1, $keypass);
+		$total_push = 0;
+		$success_push = 0;
+		$error_push = 0;
+
+
+		if ($send != "") {
+			$send_array = explode("-", $send);
+			$total_push = $total_push + $send_array[0];
+			$success_push = $success_push + $send_array[1];
+			$error_push = $error_push + $send_array[2];
+		}
+
+		if ($total_push != 0) {
+
+			$data_text = "총발송량 : " . $total_push . "  /  성공 : " . $success_push . "  /  에러 및 삭제 : " . $error_push;
+			$gp_target_url = $address;
+			$gp_target_title = cut_str(strip_tags($title . " / " . $content), 150, '');
+
+			sql_query(" INSERT INTO g5_gnupushapp_push 
+							set gp_pushid = '{$keypass}',
+							gp_issend = 'Y',
+							gp_target_browser = 'quick_send',
+							gp_text = '{$data_text}',
+							gp_push_date = '" . G5_TIME_YMDHIS . "',
+							gp_type = '{$sort}',
+							gp_target_url = '{$gp_target_url}',
+							gp_target_title = '{$gp_target_title}'
+							", true);
+		}
+	}
+}
+
+function quick_send($member_ids, $title, $content, $address, $etc, $sort, $response = false, $typeP = "normal", $async = false, $targetsort = "specific", $group = "none")
+{
+	$gnu_config = get_gnupushapp_config();
+
+	if ($gnu_config["use"] == "N") return;
+	if (!is_array($member_ids) && $targetsort == "specific") return;
+
+	if (!$sort) $sort = "must";
+
+	if ($targetsort == "group") {
+
+		$array_etc = explode("ab&#ba", $etc);
+
+		$etc_new = $array_etc[0] . "ab&#ba" . $array_etc[1] . "ab&#ba" . $array_etc[2] . "ab&#ba" . $array_etc[3] . "ab&#ba" . $array_etc[4] . "ab&#ba" . $array_etc[5];
+
+		$data = array("title" => $title, "content" => $content, "address" => $address, "level" => $group, "m_page" => 0, "pushstyle" => $array_etc[2], "image_src" => $array_etc[3], "use_marketing" => "Y", "effect" => $array_etc[7], "from" => "quicksend", "etc" => $etc_new, "sort" => $sort);
+		$gp_target_url = $address;
+		$gp_target_title = $title;
+		gnu_send_socket($data, '그룹별푸시알림', 'group', $gp_target_url, $gp_target_title);
+	} elseif ($async) {
+		$data = array("member_ids" => $member_ids, "title" => $title, "content" => $content, "address" => $address, "etc" => $etc, "sort" => $sort, "response" => $response, "typeP" => $typeP);
+		$gp_target_url = $address;
+		$gp_target_title = addslashes(cut_str($title, 50, ''));
+		gnu_send_socket($data, 'quicksend', 'quicksend', $gp_target_url, $gp_target_title);
+	} else {
+
+		$a_member_ids = array_unique(array_values(array_map('trim', $member_ids)));
+
+		$total_push = 0;
+		$success_push = 0;
+		$error_push = 0;
+		$remove_ids = array();
+
+		$etc_array = explode("ab&#ba", $etc);
+
+		// sort는 4가지 종류 : newpost, notice, must, youngcart
+
+		$sql_setting = "";
+
+		if ($sort != "must") {
+			$sql_setting = "and gpr_setting_" . $sort . " = 'Y' ";
+		}
+
+		$mb_ids = "";
+
+		for ($i = 0; $i < count($a_member_ids); $i++) {
+			if ($mb_ids == "") {
+				$mb_ids = "'" . $a_member_ids[$i] . "'";
+			} else {
+				$mb_ids .= ",'" . $a_member_ids[$i] . "'";
+			}
+		}
+
+		$devices_select1 = array();
+		$newRegIdsA1 = array();
+		$newRegIdsIbs = array(); //badge & sound
+		$newRegIdsIbm = array(); //badge & mute
+		$newRegIdsIs = array(); // sound
+		$newRegIdsIm = array(); // mute
+		$newRegIdsId = array(); // chat data
+
+		$query = "select gpr_reg_id,gpr_mb_id,gpr_sort,gpr_other_setting,gpr_sync,gpr_setting_chat,gpr_os_version from g5_gnupushapp_gcmregid where gpr_mb_id in ({$mb_ids}) $sql_setting ";
+
+		$devices_select_array = sql_query($query);
+
+		$chatpush = "true";
+		$array_mb_id = array();
+		$room_id = "0";
+		if ($typeP == "chat") {
+			$room_id = $etc_array[8];
+		}
+
+		for ($i = 1; $row = sql_fetch_array($devices_select_array); $i++) {
+			if ($row['gpr_sort'] == 'I') {
+				$other_setting_array = unserialize($row['gpr_other_setting']);
+			}
+
+			if ($row['gpr_sync'] != 'N' && $gnu_config["mypushlist"] == "Y") {
+				if ($row['gpr_setting_chat'] == 'N') $chatpush = "false";
+
+				if ($gnu_config['build_sort'] == 'A' || $gnu_config['build_sort'] == 'E' || $gnu_config["pushmsg"] == "Y") {
+					$count_badge = getBadge_by_mb_id($row['gpr_mb_id']);
+					$count_badge++;
+					$stringBadge = "badgeN" . strval($count_badge);
+					if ($row['gpr_sort'] == 'I') {
+
+						if ($typeP == "chat") {
+
+							$row_tmp = sql_fetch(" select count(*) as 'cnt' from g5_gnupushapp_chatroom_ios where gpci_reg_id = '{$row['gpr_reg_id']}' and cr_ix = '$room_id' ");
+
+							if ($row_tmp['cnt'] == 0) {
+								if ($chatpush == 'true') {
+									if ($other_setting_array[0] == 'sound') {
+										$newRegIdsIbs[$stringBadge][] = $row['gpr_reg_id'];
+									} else {
+										$newRegIdsIbm[$stringBadge][] = $row['gpr_reg_id'];
+									}
+								}
+							} else {
+								$newRegIdsId[floor($i / 1000)][] = $row['gpr_reg_id'];
+							}
+						} else if ($typeP == "read") {
+							$row_tmp = sql_fetch(" select count(*) as 'cnt' from g5_gnupushapp_chatroom_ios where gpci_reg_id = '{$row['gpr_reg_id']}' and cr_ix = '$room_id' ");
+							if ($row_tmp['cnt'] != 0) {
+								$newRegIdsId[floor($i / 1000)][] = $row['gpr_reg_id'];
+							}
+						} else {
+							if ($other_setting_array[0] == 'sound') {
+								$newRegIdsIbs[$stringBadge][] = $row['gpr_reg_id'];
+							} else {
+								$newRegIdsIbm[$stringBadge][] = $row['gpr_reg_id'];
+							}
+						}
+					} else {
+						if ($row['gpr_os_version'] >= 8) {
+							$devices_newAndroid_select1[$stringBadge][] = $row['gpr_reg_id'];
+						} else {
+							$devices_select1[floor($i / 1000)][] = $row['gpr_reg_id'];
+						}
+					}
+				} else {
+					if ($row['gpr_sort'] == 'I') {
+
+						if ($typeP == "chat") {
+
+							$row_tmp = sql_fetch(" select count(*) as 'cnt' from g5_gnupushapp_chatroom_ios where gpci_reg_id = '{$row['gpr_reg_id']}' and cr_ix = '$room_id' ");
+							if ($row_tmp['cnt'] == 0) {
+								if ($chatpush == 'true') {
+									if ($other_setting_array[0] == 'sound') {
+										$newRegIdsIs[floor($i / 1000)][] = $row['gpr_reg_id'];
+									} else {
+										$newRegIdsIm[floor($i / 1000)][] = $row['gpr_reg_id'];
+									}
+								}
+							} else {
+								$newRegIdsId[floor($i / 1000)][] = $row['gpr_reg_id'];
+							}
+						} else if ($typeP == "read") {
+							$row_tmp = sql_fetch(" select count(*) as 'cnt' from g5_gnupushapp_chatroom_ios where gpci_reg_id = '{$row['gpr_reg_id']}' and cr_ix = '$room_id' ");
+							if ($row_tmp['cnt'] != 0) {
+								$newRegIdsId[floor($i / 1000)][] = $row['gpr_reg_id'];
+							}
+						} else {
+							if ($other_setting_array[0] == 'sound') {
+								$newRegIdsIs[floor($i / 1000)][] = $row['gpr_reg_id'];
+							} else {
+								$newRegIdsIm[floor($i / 1000)][] = $row['gpr_reg_id'];
+							}
+						}
+					} else {
+						$devices_select1[floor($i / 1000)][] = $row['gpr_reg_id'];
+					}
+				}
+
+				if ($etc_array[4] == $title) {
+					$msg_subject = $etc_array[4];
+				} else {
+					$msg_subject = $etc_array[4] . " [" . $title . "]";
+				}
+				if ($response) {
+					if (!is_array($array_mb_id) || !in_array($row['gpr_mb_id'], $array_mb_id)) {
+						insert_Notification_list('notice', '', '', $msg_subject, $address, $row['gpr_mb_id'], '', '', '');
+						array_push($array_mb_id, $row['gpr_mb_id']);
+					}
+				}
+			} else {
+				if ($row['gpr_sort'] == 'I') {
+
+					if ($typeP == "chat") {
+
+						$row_tmp = sql_fetch(" select count(*) as 'cnt' from g5_gnupushapp_chatroom_ios where gpci_reg_id = '{$row['gpr_reg_id']}' and cr_ix = '$room_id' ");
+
+						if ($row_tmp['cnt'] == 0) {
+							if ($chatpush == 'true') {
+								if ($other_setting_array[0] == 'sound') {
+									$newRegIdsIs[floor($i / 1000)][] = $row['gpr_reg_id'];
+								} else {
+									$newRegIdsIm[floor($i / 1000)][] = $row['gpr_reg_id'];
+								}
+							}
+						} else {
+							$newRegIdsId[floor($i / 1000)][] = $row['gpr_reg_id'];
+						}
+					} else if ($typeP == "read") {
+						$row_tmp = sql_fetch(" select count(*) as 'cnt' from g5_gnupushapp_chatroom_ios where gpci_reg_id = '{$row['gpr_reg_id']}' and cr_ix = '$room_id' ");
+						if ($row_tmp['cnt'] != 0) {
+							$newRegIdsId[floor($i / 1000)][] = $row['gpr_reg_id'];
+						}
+					} else {
+						if ($other_setting_array[0] == 'sound') {
+							$newRegIdsIs[floor($i / 1000)][] = $row['gpr_reg_id'];
+						} else {
+							$newRegIdsIm[floor($i / 1000)][] = $row['gpr_reg_id'];
+						}
+					}
+				} else {
+					$devices_select1[floor($i / 1000)][] = $row['gpr_reg_id'];
+				}
+			}
+		}
+
+		$rnum = get_random_string_gnu('5');
+		$keypass = substr(md5(date('YmdHis')), 0, 25) . $rnum;
+
+		$devices_selectIphone = array();
+
+		$send = gnupushsend($devices_select1, $title, $content, $address, $etc, $newRegIdsIbs, $newRegIdsIbm, $newRegIdsIs, $newRegIdsIm, $devices_selectIphone, $newRegIdsId, $typeP, "important", $devices_newAndroid_select1, $keypass);
+
+		$total_push = 0;
+		$success_push = 0;
+		$error_push = 0;
+
+
+		if ($send != "") {
+			$send_array = explode("-", $send);
+			$total_push = $total_push + $send_array[0];
+			$success_push = $success_push + $send_array[1];
+			$error_push = $error_push + $send_array[2];
+		}
+
+		if ($total_push != 0) {
+
+			$data_text = "총발송량 : " . $total_push . "  /  성공 : " . $success_push . "  /  에러 및 삭제 : " . $error_push;
+
+
+			$gp_target_url = $address;
+			$gp_target_title = cut_str(strip_tags($title . " / " . $content), 150, '');
+
+			sql_query(" INSERT INTO g5_gnupushapp_push 
+							set gp_pushid = '{$keypass}',
+							gp_issend = 'Y',
+							gp_target_browser = 'quick_send',
+							gp_text = '{$data_text}',
+							gp_push_date = '" . G5_TIME_YMDHIS . "',
+							gp_type = '{$sort}',
+							gp_target_url = '{$gp_target_url}',
+							gp_target_title = '{$gp_target_title}'
+							", true);
+		}
+	}
+}
+
+function gnupushsend($devices_select, $title, $content, $address, $etc, $newRegIdsIbs = array(), $newRegIdsIbm = array(), $newRegIdsIs = array(), $newRegIdsIm = array(), $devices_selectIphone = array(), $newRegIdsId = array(), $typeP = "normal", $pushchannel = "important", $devices_newAndroid_select = array(), $keypass = "0")
+{
+	$pushchannel = "important";
+	$total_push = 0;
+	$success_push = 0;
+	$error_push = 0;
+	$gnu_config = get_gnupushapp_config();
+
+	$serviceAccountFilePath = G5_PATH . '/lib/' . $gnu_config['service_account_file'];
+
+	if (!$gnu_config['service_account_file'] || !$gnu_config['project_name'] || !file_exists($serviceAccountFilePath)) return;
+
+	require_once(G5_PATH . '/lib/google-api-php-client/vendor/autoload.php');
+
+	$projectId = $gnu_config['project_name'];
+
+	$fcmUrl = "https://fcm.googleapis.com/v1/projects/{$projectId}/messages:send";
+
+	// Create a Google Client
+	$client = new Google_Client();
+	$client->setAuthConfig($serviceAccountFilePath);
+	$client->addScope('https://www.googleapis.com/auth/firebase.messaging');
+
+	// Get access token
+	$client->fetchAccessTokenWithAssertion();
+	$accessToken = $client->getAccessToken();
+
+	// Headers
+	$headers = array(
+		'Authorization: Bearer ' . $accessToken['access_token'],
+		'Content-Type: application/json'
+	);
+
+	$etc_array = explode("ab&#ba", $etc);
+	$image = $etc_array[3];
+	$profile_img = $etc_array[1];
+	$ticker = $etc_array[4];
+	$bottom_text = $etc_array[5];
+	$pushstyle = $etc_array[2];
+
+	if ($gnu_config['use_onlyapp_url'] == 'Y') {
+		$address = str_replace(G5_URL, $gnu_config['onlyapp_url'], $address);
+	}
+
+	$maxConnections = 50;
+	$token_array = array();
+	$multiCurl = array();
+	$mh = curl_multi_init();
+	curl_multi_setopt($mh, CURLMOPT_PIPELINING, CURLPIPE_MULTIPLEX);
+	curl_multi_setopt($mh, CURLMOPT_MAX_TOTAL_CONNECTIONS, $maxConnections);
+	
+	$pu_i = 0;
+
+	if (is_array($devices_newAndroid_select) && count($devices_newAndroid_select) > 0) {
+		$typeP22 = $typeP;
+		if ($typeP == "chat") $typeP22 = "chatpush";
+
+		foreach ($devices_newAndroid_select as $badgeNS => $val1) {
+			$badgeNSd = str_replace("badgeN", "", $badgeNS);
+			$badgeN = intval($badgeNSd);
+
+			unset($newRegIdsIbs_f);
+			$newRegIdsIbs_f = array();
+
+			$ijk = 0;
+			foreach ($val1 as $red_id) {
+				$ijk++;
+				$newRegIdsIbs_f[floor($ijk / 1000)][] = $red_id;
+			}
+
+			foreach ($newRegIdsIbs_f as $val) {
+
+				if (!is_array($val)) {
+					$val = array($val);
+				}
+
+				$total_push = $total_push + count($val);
+
+				$message = array(
+					'message' => array(
+						'token' => "",
+						"android" => array(
+							"priority" => "high",
+						),
+						"data" => array(
+							"title" => $title,
+							"content" => $content,
+							"address" => $address,
+							"channel" => $pushchannel,
+							"type" => $typeP,
+							"image" => $image,
+							"profile_img" => $profile_img,
+							"ticker" => $ticker,
+							"bottom_text" => $bottom_text,
+							"pushstyle" => $pushstyle,
+							"badge" => (string) $badgeN,
+							"keypass" => $keypass,
+							'etc' => $etc,
+						)
+					)
+				);
+
+				foreach ($val as $token_val) {
+					$message['message']['token'] = $token_val;
+
+					array_push($token_array, $token_val);
+
+					$multiCurl[$pu_i] = curl_init();
+					curl_setopt($multiCurl[$pu_i], CURLOPT_URL, $fcmUrl);
+					curl_setopt($multiCurl[$pu_i], CURLOPT_HTTPHEADER, $headers);
+					curl_setopt($multiCurl[$pu_i], CURLOPT_RETURNTRANSFER, true);
+					curl_setopt($multiCurl[$pu_i], CURLOPT_POST, true);
+					curl_setopt($multiCurl[$pu_i], CURLOPT_SSL_VERIFYHOST, 0);
+					curl_setopt($multiCurl[$pu_i], CURLOPT_SSL_VERIFYPEER, false);
+					curl_setopt($multiCurl[$pu_i], CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_2_0);
+					curl_setopt($multiCurl[$pu_i], CURLOPT_POSTFIELDS, json_encode($message, JSON_UNESCAPED_UNICODE));
+					curl_multi_add_handle($mh, $multiCurl[$pu_i]);
+
+					$pu_i++;
+				}
+			}
+		}
+	}
+
+	if (is_array($devices_select) && count($devices_select) >  0) {
+
+		foreach ($devices_select as $val) {
+
+			if (!is_array($val)) {
+				$val = array($val);
+			}
+
+			$total_push = $total_push + count($val);
+
+			$message = array(
+				'message' => array(
+					'token' => "",
+					"android" => array(
+						"priority" => "high",
+					),
+					"data" => array(
+						"title" => $title,
+						"content" => $content,
+						"address" => $address,
+						"channel" => $pushchannel,
+						"type" => $typeP,
+						"image" => $image,
+						"profile_img" => $profile_img,
+						"ticker" => $ticker,
+						"bottom_text" => $bottom_text,
+						"pushstyle" => $pushstyle,
+						"badge" => "0",
+						"keypass" => $keypass,
+						'etc' => $etc,
+					)
+				)
+			);
+
+			foreach ($val as $token_val) {
+				$message['message']['token'] = $token_val;
+
+				array_push($token_array, $token_val);
+
+				$multiCurl[$pu_i] = curl_init();
+				curl_setopt($multiCurl[$pu_i], CURLOPT_URL, $fcmUrl);
+				curl_setopt($multiCurl[$pu_i], CURLOPT_HTTPHEADER, $headers);
+				curl_setopt($multiCurl[$pu_i], CURLOPT_RETURNTRANSFER, true);
+				curl_setopt($multiCurl[$pu_i], CURLOPT_POST, true);
+				curl_setopt($multiCurl[$pu_i], CURLOPT_SSL_VERIFYHOST, 0);
+				curl_setopt($multiCurl[$pu_i], CURLOPT_SSL_VERIFYPEER, false);
+				curl_setopt($multiCurl[$pu_i], CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_2_0);
+				curl_setopt($multiCurl[$pu_i], CURLOPT_POSTFIELDS, json_encode($message, JSON_UNESCAPED_UNICODE));
+				curl_multi_add_handle($mh, $multiCurl[$pu_i]);
+
+				$pu_i++;
+			}
+		}
+	}
+
+	if (is_array($devices_selectIphone) && count($devices_selectIphone) >  0) {
+
+		foreach ($devices_selectIphone as $val) {
+			if (!is_array($val)) {
+				$val = array($val);
+			}
+
+			$total_push = $total_push + count($val);
+
+			$message = array(
+				'message' => array(
+					'token' => "",
+					"apns" => array(
+						"headers" => array(
+							"apns-priority" => "10",
+						),
+					),
+					"data" => array(
+						"type" => 'normal',
+						'pushtype' => 'delete',
+						'link_url' => "none",
+						'keypass' => $keypass
+					),
+					"android" => array(
+						"priority" => "high",
+					),
+				)
+			);
+
+			foreach ($val as $token_val) {
+				$message['message']['token'] = $token_val;
+
+				array_push($token_array, $token_val);
+
+				$multiCurl[$pu_i] = curl_init();
+				curl_setopt($multiCurl[$pu_i], CURLOPT_URL, $fcmUrl);
+				curl_setopt($multiCurl[$pu_i], CURLOPT_HTTPHEADER, $headers);
+				curl_setopt($multiCurl[$pu_i], CURLOPT_RETURNTRANSFER, true);
+				curl_setopt($multiCurl[$pu_i], CURLOPT_POST, true);
+				curl_setopt($multiCurl[$pu_i], CURLOPT_SSL_VERIFYHOST, 0);
+				curl_setopt($multiCurl[$pu_i], CURLOPT_SSL_VERIFYPEER, false);
+				curl_setopt($multiCurl[$pu_i], CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_2_0);
+				curl_setopt($multiCurl[$pu_i], CURLOPT_POSTFIELDS, json_encode($message, JSON_UNESCAPED_UNICODE));
+				curl_multi_add_handle($mh, $multiCurl[$pu_i]);
+
+				$pu_i++;
+			}
+		}
+	}
+
+	if (is_array($newRegIdsIbs) && count($newRegIdsIbs) > 0) {
+		$typeP22 = $typeP;
+		if ($typeP == "chat") $typeP22 = "chatpush";
+
+		foreach ($newRegIdsIbs as $badgeNS => $val1) {
+			$badgeNSd = str_replace("badgeN", "", $badgeNS);
+			$badgeN = intval($badgeNSd);
+
+			unset($newRegIdsIbs_f);
+			$newRegIdsIbs_f = array();
+
+			$ijk = 0;
+			foreach ($val1 as $red_id) {
+				$ijk++;
+				$newRegIdsIbs_f[floor($ijk / 1000)][] = $red_id;
+			}
+
+			foreach ($newRegIdsIbs_f as $val) {
+
+				if (!is_array($val)) {
+					$val = array($val);
+				}
+
+				$total_push = $total_push + count($val);
+
+				
+	
+				foreach ($val as $token_val) {
+					$message = getfields_gcm2($typeP22, $token_val, $title, $content, $address, $etc, $badgeN, 'sound', $keypass);
+	
+					array_push($token_array, $token_val);
+	
+					$multiCurl[$pu_i] = curl_init();
+					curl_setopt($multiCurl[$pu_i], CURLOPT_URL, $fcmUrl);
+					curl_setopt($multiCurl[$pu_i], CURLOPT_HTTPHEADER, $headers);
+					curl_setopt($multiCurl[$pu_i], CURLOPT_RETURNTRANSFER, true);
+					curl_setopt($multiCurl[$pu_i], CURLOPT_POST, true);
+					curl_setopt($multiCurl[$pu_i], CURLOPT_SSL_VERIFYHOST, 0);
+					curl_setopt($multiCurl[$pu_i], CURLOPT_SSL_VERIFYPEER, false);
+					curl_setopt($multiCurl[$pu_i], CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_2_0);
+					curl_setopt($multiCurl[$pu_i], CURLOPT_POSTFIELDS, json_encode($message, JSON_UNESCAPED_UNICODE));
+					curl_multi_add_handle($mh, $multiCurl[$pu_i]);
+	
+					$pu_i++;
+				}
+			}
+		}
+	}
+
+	if (is_array($newRegIdsIbm) && count($newRegIdsIbm) > 0) {
+
+		$typeP22 = $typeP;
+		if ($typeP == "chat") $typeP22 = "chatpush";
+
+		foreach ($newRegIdsIbm as $badgeNS => $val1) {
+			$badgeNSd = str_replace("badgeN", "", $badgeNS);
+			$badgeN = intval($badgeNSd);
+
+			unset($newRegIdsIbm_f);
+			$newRegIdsIbm_f = array();
+
+			$ijk = 0;
+			foreach ($val1 as $red_id) {
+				$ijk++;
+				$newRegIdsIbm_f[floor($ijk / 1000)][] = $red_id;
+			}
+
+			foreach ($newRegIdsIbm_f as $val) {
+
+				if (!is_array($val)) {
+					$val = array($val);
+				}
+
+				$total_push = $total_push + count($val);
+
+				foreach ($val as $token_val) {
+					$message = getfields_gcm2($typeP22, $token_val, $title, $content, $address, $etc, $badgeN, 'mute', $keypass);
+	
+					array_push($token_array, $token_val);
+	
+					$multiCurl[$pu_i] = curl_init();
+					curl_setopt($multiCurl[$pu_i], CURLOPT_URL, $fcmUrl);
+					curl_setopt($multiCurl[$pu_i], CURLOPT_HTTPHEADER, $headers);
+					curl_setopt($multiCurl[$pu_i], CURLOPT_RETURNTRANSFER, true);
+					curl_setopt($multiCurl[$pu_i], CURLOPT_POST, true);
+					curl_setopt($multiCurl[$pu_i], CURLOPT_SSL_VERIFYHOST, 0);
+					curl_setopt($multiCurl[$pu_i], CURLOPT_SSL_VERIFYPEER, false);
+					curl_setopt($multiCurl[$pu_i], CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_2_0);
+					curl_setopt($multiCurl[$pu_i], CURLOPT_POSTFIELDS, json_encode($message, JSON_UNESCAPED_UNICODE));
+					curl_multi_add_handle($mh, $multiCurl[$pu_i]);
+	
+					$pu_i++;
+				}
+			}
+		}
+	}
+
+	if (is_array($newRegIdsIs) && count($newRegIdsIs) >  0) {
+
+		foreach ($newRegIdsIs as $val) {
+
+			if (!is_array($val)) {
+				$val = array($val);
+			}
+
+			$total_push = $total_push + count($val);
+
+			foreach ($val as $token_val) {
+				$message = getfields_gcm2($typeP, $token_val, $title, $content, $address, $etc, 0, 'sound', $keypass);
+
+				array_push($token_array, $token_val);
+
+				$multiCurl[$pu_i] = curl_init();
+				curl_setopt($multiCurl[$pu_i], CURLOPT_URL, $fcmUrl);
+				curl_setopt($multiCurl[$pu_i], CURLOPT_HTTPHEADER, $headers);
+				curl_setopt($multiCurl[$pu_i], CURLOPT_RETURNTRANSFER, true);
+				curl_setopt($multiCurl[$pu_i], CURLOPT_POST, true);
+				curl_setopt($multiCurl[$pu_i], CURLOPT_SSL_VERIFYHOST, 0);
+				curl_setopt($multiCurl[$pu_i], CURLOPT_SSL_VERIFYPEER, false);
+				curl_setopt($multiCurl[$pu_i], CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_2_0);
+				curl_setopt($multiCurl[$pu_i], CURLOPT_POSTFIELDS, json_encode($message, JSON_UNESCAPED_UNICODE));
+				curl_multi_add_handle($mh, $multiCurl[$pu_i]);
+
+				$pu_i++;
+			}
+		}
+	}
+
+	if (is_array($newRegIdsId) && count($newRegIdsId) >  0) {
+
+		foreach ($newRegIdsId as $val) {
+
+			$typeP2 = $typeP;
+
+			if (!is_array($val)) {
+				$val = array($val);
+			}
+
+			$total_push = $total_push + count($val);
+
+			foreach ($val as $token_val) {
+				$message = getfields_gcm2($typeP2, $token_val, $title, $content, $address, $etc, 0, 'sound', $keypass);
+
+				array_push($token_array, $token_val);
+
+				$multiCurl[$pu_i] = curl_init();
+				curl_setopt($multiCurl[$pu_i], CURLOPT_URL, $fcmUrl);
+				curl_setopt($multiCurl[$pu_i], CURLOPT_HTTPHEADER, $headers);
+				curl_setopt($multiCurl[$pu_i], CURLOPT_RETURNTRANSFER, true);
+				curl_setopt($multiCurl[$pu_i], CURLOPT_POST, true);
+				curl_setopt($multiCurl[$pu_i], CURLOPT_SSL_VERIFYHOST, 0);
+				curl_setopt($multiCurl[$pu_i], CURLOPT_SSL_VERIFYPEER, false);
+				curl_setopt($multiCurl[$pu_i], CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_2_0);
+				curl_setopt($multiCurl[$pu_i], CURLOPT_POSTFIELDS, json_encode($message, JSON_UNESCAPED_UNICODE));
+				curl_multi_add_handle($mh, $multiCurl[$pu_i]);
+
+				$pu_i++;
+			}
+		}
+	}
+
+	if (is_array($newRegIdsIm) && count($newRegIdsIm) >  0) {
+
+		foreach ($newRegIdsIm as $val) {
+			if (!is_array($val)) {
+				$val = array($val);
+			}
+
+			$total_push = $total_push + count($val);
+
+			foreach ($val as $token_val) {
+				$message = getfields_gcm2($typeP, $token_val, $title, $content, $address, $etc, 0, 'mute', $keypass);
+
+				array_push($token_array, $token_val);
+
+				$multiCurl[$pu_i] = curl_init();
+				curl_setopt($multiCurl[$pu_i], CURLOPT_URL, $fcmUrl);
+				curl_setopt($multiCurl[$pu_i], CURLOPT_HTTPHEADER, $headers);
+				curl_setopt($multiCurl[$pu_i], CURLOPT_RETURNTRANSFER, true);
+				curl_setopt($multiCurl[$pu_i], CURLOPT_POST, true);
+				curl_setopt($multiCurl[$pu_i], CURLOPT_SSL_VERIFYHOST, 0);
+				curl_setopt($multiCurl[$pu_i], CURLOPT_SSL_VERIFYPEER, false);
+				curl_setopt($multiCurl[$pu_i], CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_2_0);
+				curl_setopt($multiCurl[$pu_i], CURLOPT_POSTFIELDS, json_encode($message, JSON_UNESCAPED_UNICODE));
+				curl_multi_add_handle($mh, $multiCurl[$pu_i]);
+
+				$pu_i++;
+			}
+		}
+	}
+
+	$result = array();
+
+	$remove_tokens = array();
+
+	$active = null;
+	do {
+		$status = curl_multi_exec($mh, $active);
+		if ($active) {
+			curl_multi_select($mh); // I/O 대기 시간 처리
+		}
+	} while ($active && $status == CURLM_OK);
+
+	foreach ($multiCurl as $k => $ch) {
+		$result[$k] = curl_multi_getcontent($ch);
+		curl_multi_remove_handle($mh, $ch);
+		curl_close($ch);
+	}
+	curl_multi_close($mh);
+
+	foreach ($result as $iiii => $gcm_result) {
+
+		$jsonArray = json_decode($gcm_result);
+		if ($jsonArray->error) {
+			import_Error_device("push_error", addslashes($gcm_result));
+			array_push($remove_tokens, $token_array[$iiii]);
+			$error_push++;
+		} else {
+			$success_push++;
+		}
+	}
+
+
+	if (count($remove_tokens) > 0) {
+		// foreach ($remove_tokens as $val_del) {
+		// 	if ($val_del == "null" || $val_del == "BLACKLISTED") {
+		// 		// 구독설정부분 null 삭제처리하기
+		// 		$query = "select count(*) as 'cnt' from g5_gnupushapp_subscribe where gss_reg_id = 'null' or gss_reg_id = 'BLACKLISTED' ";
+		// 		$row = sql_fetch($query);
+		// 		if ($row['cnt'] > 0) {
+		// 			$query = "select gss_ix from g5_gnupushapp_subscribe where gss_reg_id = 'null' or gss_reg_id = 'BLACKLISTED' ";
+		// 			$devices_select = sql_query($query);
+		// 			for ($i = 0; $rowddd = sql_fetch_array($devices_select); $i++) {
+		// 				$sql = " delete from g5_gnupushapp_subscribe where gss_ix = '{$rowddd['gss_ix']}' ";
+		// 				sql_query($sql);
+		// 			}
+		// 		}
+		// 		$row_count = sql_fetch(" select count(*) as 'cnt' from g5_gnupushapp_gcmregid where gpr_reg_id = '{$val_del}' ");
+		// 		if ($row_count['cnt'] > 0) {
+		// 			$sql = " delete from g5_gnupushapp_gcmregid where gpr_reg_id = '{$val_del}' ";
+		// 			sql_query($sql);
+		// 		}
+		// 	} else {
+		// 		$row_count = sql_fetch(" select count(*) as 'cnt' from g5_gnupushapp_gcmregid where gpr_reg_id = '{$val_del}' ");
+		// 		if ($row_count['cnt'] > 0) {
+		// 			$sql = " delete from g5_gnupushapp_gcmregid where gpr_reg_id = '{$val_del}' ";
+		// 			sql_query($sql);
+		// 		} else {
+		// 			$sql = " delete from g5_gnupushapp_subscribe where gss_reg_id = '{$val_del}' ";
+		// 			sql_query($sql);
+		// 		}
+		// 	}
+		// }
+	}
+
+	if ($typeP != "delete") set_today_statistic("push", intval($success_push));
+
+	$send_return = $total_push . "-" . $success_push . "-" . $error_push;
+
+	return $send_return;
+}
+
+function get_today_statistic()
+{
+	$statistics = array();
+
+	$count_statistics = sql_fetch(" select count(*) as 'cnt' from g5_gnupushapp_statistics order by grs_regdate limit 1");
+
+	if ($count_statistics['cnt'] > 0) {
+		$statistics = sql_fetch(" select * from g5_gnupushapp_statistics order by grs_regdate desc limit 1");
+		$nowDate = date('Y-m-d', time());
+		$recentDate = date("Y-m-d", strtotime($statistics['grs_regdate']));
+		if ($nowDate == $recentDate) {
+			$statistics['exist_data'] = "Y";
+		} else {
+			unset($statistics);
+			$statistics = array();
+			$statistics['exist_data'] = "N";
+		}
+	} else {
+		$statistics['exist_data'] = "N";
+	}
+
+	return $statistics;
+}
+
+function set_today_statistic($sort, $number)
+{
+
+	// 오늘의 통계값 가져오기
+	$today_data = get_today_statistic();
+
+	$total_count = sql_fetch(" SELECT count(*) as 'cnt' FROM g5_gnupushapp_gcmregid");
+
+	$grs_access = 0;
+	$grs_push = 0;
+	$grs_new = 0;
+	$grs_click = 0;
+	$grs_total_device = $total_count['cnt'];
+	$grs_error = 0;
+
+	if ($today_data['exist_data'] == "Y") {
+		$grs_access = $today_data['grs_access'];
+		$grs_push = $today_data['grs_push'];
+		$grs_new = $today_data['grs_new'];
+		$grs_click = $today_data['grs_click'];
+		$grs_error = $today_data['grs_error'];
+	}
+
+	// sort : access, push, new, click, error
+
+	if ($sort == "access") {
+		$grs_access = $grs_access + $number;
+	}
+
+	if ($sort == "new") {
+		$grs_access = $grs_access + $number;
+		$grs_new = $grs_new + $number;
+	}
+
+	if ($sort == "push") {
+		$grs_push = $grs_push + $number;
+	}
+
+	if ($sort == "click") {
+		$grs_click = $grs_click + $number;
+	}
+
+	if ($sort == "error") {
+		$grs_error = $grs_error + $number;
+	}
+
+	if ($today_data['exist_data'] == "Y") {
+		sql_query(" update g5_gnupushapp_statistics
+					set grs_access = '{$grs_access}',
+					grs_push = '{$grs_push}',
+					grs_new = '{$grs_new}',
+					grs_click = '{$grs_click}',
+					grs_total_device = '{$grs_total_device}',
+					grs_error = '{$grs_error}'
+					where grs_ix = '{$today_data['grs_ix']}' ", true);
+	} else {
+		sql_query(" INSERT INTO g5_gnupushapp_statistics 
+					set grs_access = '{$grs_access}',
+					grs_push = '{$grs_push}',
+					grs_new = '{$grs_new}',
+					grs_click = '{$grs_click}',
+					grs_total_device = '{$grs_total_device}',
+					grs_error = '{$grs_error}',
+					grs_regdate = '" . G5_TIME_YMDHIS . "'
+					", true);
+	}
+}
+
+function get_device_info_by_regid($reg_id)
+{
+	$row_tmp_reg_id = sql_fetch(" select * from g5_gnupushapp_gcmregid where gpr_reg_id = '{$reg_id}' ");
+	return $row_tmp_reg_id;
+}
+
+function get_device_by_member_id($member_id)
+{
+	$row_tmp_reg_id = sql_query(" select * from g5_gnupushapp_gcmregid where gpr_mb_id = '{$member_id}' ");
+	return $row_tmp_reg_id;
+}
+
+function get_device_count_by_member_id($member_id)
+{
+	$row_tmp_reg_id = sql_fetch(" select count(*) as 'cnt' from g5_gnupushapp_gcmregid where gpr_mb_id = '{$member_id}' ");
+	return $row_tmp_reg_id['cnt'];
+}
+
+function get_devices_by_member_ids($member_ids)
+{
+	$mb_id_list = "";
+	if (is_array($member_ids)) {
+		$member_ids = $member_ids;
+	} else {
+		$member_ids = array($member_ids);
+	}
+	for ($i = 0; $i < count($member_ids); $i++) {
+		if ($mb_id_list == "") {
+			$mb_id_list = "'" . $member_ids[$i] . "'";
+		} else {
+			$mb_id_list .= ",'" . $member_ids[$i] . "'";
+		}
+	}
+	$row_tmp_reg_id = sql_query(" select * from g5_gnupushapp_gcmregid where gpr_mb_id in ({$mb_id_list}) ");
+	return $row_tmp_reg_id;
+}
+
+function check_device_exist($member_id, $sort)
+{
+
+	// sort는 4가지 종류 : newpost, notice, must, youngcart
+
+	$sql_setting = "";
+
+	if (!$sort) $sort = "must";
+
+	if ($sort != "must") {
+		$sql_setting = "and gpr_setting_" . $sort . " = 'Y' ";
+	}
+
+	$query = "select count(*) as 'cnt' from g5_gnupushapp_gcmregid where gpr_mb_id = '{$member_id}' $sql_setting ";
+	$row = sql_fetch($query);
+	if ($row['cnt'] == 0) {
+		return false;
+	} else {
+		return true;
+	}
+}
+
+function sync_device_memb_id($member_id)
+{
+	if ($_SESSION['ss_mb_id'] && preg_match("/GNUPUSH/", $_SERVER['HTTP_USER_AGENT']) && $reg_id = get_session('reg_id')) {
+
+		$gnu_configd = get_gnupushapp_config();
+		if ($gnu_configd['change_s'] == "Y" && $gnu_configd['setting_a']) {
+			setdefaultsetting_after($reg_id);
+		}
+		$sql = " update g5_gnupushapp_gcmregid
+					set gpr_mb_id = '{$member_id}',
+					gpr_sync = 'Y',
+					gpr_last_login = '" . G5_TIME_YMDHIS . "'
+					where gpr_reg_id = '{$reg_id}' ";
+		sql_query($sql);
+		$sql = " update g5_gnupushapp_subscribe
+					set gss_mb_id = '{$member_id}',
+					gss_sync = 'Y'
+					where gss_reg_id = '{$reg_id}' ";
+		sql_query($sql);
+	}
+}
+
+function sync_device_member_social_login2($social_provider, $sns_mb_id)
+{
+	if ($sns_mb_id && $social_provider && $reg_id = get_session('reg_id')) {
+
+		switch ($social_provider) {
+			case 'gg':
+				$social_provider = "google";
+				break;
+			case 'fb':
+				$social_provider = "facebook";
+				break;
+			default:
+
+				break;
+		}
+
+		$gpr_social = $social_provider . "#$%mb_id#$%" . $sns_mb_id;
+
+		$device_info = get_device_info_by_regid($reg_id);
+
+		if ($device_info['gpr_sync'] == "N") {
+			$gnu_configd = get_gnupushapp_config();
+			if ($gnu_configd['change_s'] == "Y" && $gnu_configd['setting_a']) {
+				setdefaultsetting_after($reg_id);
+			}
+			$sql = " update g5_gnupushapp_gcmregid
+						set gpr_mb_id = '{$sns_mb_id}',
+						gpr_social = '{$gpr_social}',
+						gpr_sync = 'S',
+						gpr_last_login = '" . G5_TIME_YMDHIS . "'
+						where gpr_reg_id = '{$reg_id}' ";
+			sql_query($sql);
+
+			$sql = " update g5_gnupushapp_subscribe
+					set gss_mb_id = '{$sns_mb_id}',
+					gss_sync = 'S'
+					where gss_reg_id = '{$reg_id}' ";
+			sql_query($sql);
+		} elseif ($device_info['gpr_social'] != $gpr_social || $sns_mb_id != $device_info['gpr_mb_id']) {
+
+			$sql = " update g5_gnupushapp_gcmregid
+					set gpr_mb_id = '{$sns_mb_id}',
+					gpr_social = '{$gpr_social}',
+					gpr_sync = 'S',
+					gpr_last_login = '" . G5_TIME_YMDHIS . "'
+					where gpr_reg_id = '{$reg_id}' ";
+			sql_query($sql);
+			$sql = " update g5_gnupushapp_subscribe
+					set gss_mb_id = '{$sns_mb_id}',
+					gss_sync = 'S'
+					where gss_reg_id = '{$reg_id}' ";
+			sql_query($sql);
+		}
+	}
+}
+
+function sync_device_memb_id_webview_login($member_id)
+{
+	if ($_SESSION['ss_mb_id'] && preg_match("/GNUPUSH/", $_SERVER['HTTP_USER_AGENT']) && $reg_id = get_session('reg_id')) {
+		$gnu_configd = get_gnupushapp_config();
+		if ($gnu_configd['change_s'] == "Y" && $gnu_configd['setting_a']) {
+			setdefaultsetting_after($reg_id);
+		}
+
+		$sql = " update g5_gnupushapp_gcmregid
+					set gpr_mb_id = '{$member_id}',
+					gpr_sync = 'D',
+					gpr_last_login = '" . G5_TIME_YMDHIS . "'
+					where gpr_reg_id = '{$reg_id}' ";
+		sql_query($sql);
+
+		$sql = " update g5_gnupushapp_subscribe
+				set gss_mb_id = '{$member_id}',
+				gss_sync = 'D'
+				where gss_reg_id = '{$reg_id}' ";
+		sql_query($sql);
+	}
+}
+
+function sendBadge($sort, $reg_ids, $count_badge)
+{
+
+	$gnu_config = get_gnupushapp_config();
+
+	$serviceAccountFilePath = G5_PATH . '/lib/' . $gnu_config['service_account_file'];
+
+	if (!$gnu_config['service_account_file'] || !$gnu_config['project_name'] || !file_exists($serviceAccountFilePath)) return;
+
+	require_once(G5_PATH . '/lib/google-api-php-client/vendor/autoload.php');
+
+	$projectId = $gnu_config['project_name'];
+
+	$fcmUrl = "https://fcm.googleapis.com/v1/projects/{$projectId}/messages:send";
+
+	// Create a Google Client
+	$client = new Google_Client();
+	$client->setAuthConfig($serviceAccountFilePath);
+	$client->addScope('https://www.googleapis.com/auth/firebase.messaging');
+
+	// Get access token
+	$client->fetchAccessTokenWithAssertion();
+	$accessToken = $client->getAccessToken();
+
+	// Headers
+	$headers = array(
+		'Authorization: Bearer ' . $accessToken['access_token'],
+		'Content-Type: application/json'
+	);
+
+
+
+	//안드로이드 구버전과 iOS만 해당함.
+	if ($sort != "A" && $sort != "I") {
+		return;
+	}
+
+	if (!$count_badge) {
+		if ($is_member && $badge = get_session('gnu_badge')) {
+			$count_badge = $badge;
+		} else {
+			$count_badge = 0;
+		}
+	}
+
+	$message = array(
+		'message' => array(
+			'token' => "",
+			"android" => array(
+				"priority" => "high",
+			),
+			"data" => array(
+				"title" => "none", "content" => "none", "address" => "none", "etc" => "none", "type" => "RefreshBadge", "badge" => (string) $count_badge, "channel" => "important"
+			)
+		)
+	);
+
+	if ($sort == "I") {
+		$message = array(
+			'message' => array(
+				'token' => "",
+				"apns" => array(
+					"payload" => array(
+						"aps" => array(
+							"badge" => $count_badge,
+						),
+					),
+				),
+				"data" => array(
+					'pushtype' => "RefreshBadge"
+				)
+			)
+		);
+	}
+
+	if (is_array($reg_ids)) {
+		$devices = $reg_ids;
+	} else {
+		$devices = array($reg_ids);
+	}
+
+	$maxConnections = 50;
+	$multiCurl = array();
+	$mh = curl_multi_init();
+	curl_multi_setopt($mh, CURLMOPT_PIPELINING, CURLPIPE_MULTIPLEX);
+	curl_multi_setopt($mh, CURLMOPT_MAX_TOTAL_CONNECTIONS, $maxConnections);
+
+	$pu_i = 0;
+
+	foreach ($devices as $token_val) {
+
+		$message['message']['token'] = $token_val;
+
+		$multiCurl[$pu_i] = curl_init();
+		curl_setopt($multiCurl[$pu_i], CURLOPT_URL, $fcmUrl);
+		curl_setopt($multiCurl[$pu_i], CURLOPT_HTTPHEADER, $headers);
+		curl_setopt($multiCurl[$pu_i], CURLOPT_RETURNTRANSFER, true);
+		curl_setopt($multiCurl[$pu_i], CURLOPT_POST, true);
+		curl_setopt($multiCurl[$pu_i], CURLOPT_SSL_VERIFYHOST, 0);
+		curl_setopt($multiCurl[$pu_i], CURLOPT_SSL_VERIFYPEER, false);
+		curl_setopt($multiCurl[$pu_i], CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_2_0);
+		curl_setopt($multiCurl[$pu_i], CURLOPT_POSTFIELDS, json_encode($message, JSON_UNESCAPED_UNICODE));
+		curl_multi_add_handle($mh, $multiCurl[$pu_i]);
+
+		$pu_i++;
+	}
+
+	$result = array();
+
+	$index = null;
+	do {
+		curl_multi_exec($mh, $index);
+		curl_multi_select($mh);
+	} while ($index > 0);
+
+	foreach ($multiCurl as $k => $ch) {
+		$result[$k] = curl_multi_getcontent($ch);
+		curl_multi_remove_handle($mh, $ch);
+	}
+	curl_multi_close($mh);
+}
+
+function go_push_socket($url)
+{
+	$gnu_config = get_gnupushapp_config();
+	if ($gnu_config['push_m'] == 'Y') {
+		$method = 'POST';
+
+		$info = parse_url($url);
+		$req = '';
+		$data = '';
+		$line = '';
+		$agent = 'Mozilla/5.0 (compatible; MSIE 9.0; Windows NT 6.0; Trident/5.0)';
+		$linebreak = "\r\n";
+		$headPassed = false;
+		$referer = G5_URL . "/";
+
+		// Setting Protocol
+		switch ($info['scheme'] = strtoupper($info['scheme'])) {
+			case 'HTTP':
+				$info['port'] = 80;
+				break;
+
+			case 'HTTPS':
+				$info['ssl'] = 'ssl://';
+				$info['port'] = 443;
+				break;
+
+			default:
+				return false;
+		}
+
+		// Setting Path
+		if (!$info['path']) {
+			$info['path'] = '/';
+		}
+
+		// Setting Request Header
+		switch ($method = strtoupper($method)) {
+			case 'GET':
+				if ($info['query']) {
+					$info['path'] .= '?' . $info['query'];
+				}
+
+				$req .= 'GET ' . $info['path'] . ' HTTP/1.1' . $linebreak;
+				$req .= 'Host: ' . $info['host'] . $linebreak;
+				$req .= 'User-Agent: ' . $agent . $linebreak;
+				$req .= 'Referer: ' . $referer . $linebreak;
+				$req .= 'Connection: Close' . $linebreak . $linebreak;
+				break;
+
+			case 'POST':
+				$req .= 'POST ' . $info['path'] . ' HTTP/1.1' . $linebreak;
+				$req .= 'Host: ' . $info['host'] . $linebreak;
+				$req .= 'User-Agent: ' . $agent . $linebreak;
+				$req .= 'Referer: ' . $referer . $linebreak;
+				$req .= 'Content-Type: application/x-www-form-urlencoded' . $linebreak;
+				$req .= 'Content-Length: ' . strlen($info['query']) . $linebreak;
+				$req .= 'Connection: Close' . $linebreak . $linebreak;
+				$req .= $info['query'];
+				break;
+		}
+
+		// Socket Open
+		$fsock = @fsockopen($info['ssl'] . $info['host'], $info['port'], $errno, $errstr);
+		if ($fsock) {
+			fwrite($fsock, $req);
+			if ($gnu_config['push_delay'] != 0) sleep($gnu_config['push_delay']);
+			fclose($fsock);
+		} else {
+			import_Error_device("socket error", "[" . $errno . "] " . $errstr);
+		}
+	}
+}
+
+function getGnuNews()
+{
+	// $return_val = "";
+	// $url = "http://gnupushapp.com/plugin/gnupushapp/procGNUnews.php";
+	// $method = 'POST';
+	// $info = parse_url($url);
+	// $req = '';
+	// $data = '';
+	// $line = '';
+	// $agent = 'Mozilla/5.0 (compatible; MSIE 9.0; Windows NT 6.0; Trident/5.0)';
+	// $linebreak = "\r\n";
+	// $headPassed = false;
+	// $referer = G5_URL . "/";
+
+	// // Setting Protocol
+	// switch ($info['scheme'] = strtoupper($info['scheme'])) {
+	// 	case 'HTTP':
+	// 		$info['port'] = 80;
+	// 		break;
+
+	// 	case 'HTTPS':
+	// 		$info['ssl'] = 'ssl://';
+	// 		$info['port'] = 443;
+	// 		break;
+
+	// 	default:
+	// 		return false;
+	// }
+
+	// // Setting Path
+	// if (!$info['path']) {
+	// 	$info['path'] = '/';
+	// }
+
+	// // Setting Request Header
+	// switch ($method = strtoupper($method)) {
+	// 	case 'GET':
+	// 		if ($info['query']) {
+	// 			$info['path'] .= '?' . $info['query'];
+	// 		}
+
+	// 		$req .= 'GET ' . $info['path'] . ' HTTP/1.1' . $linebreak;
+	// 		$req .= 'Host: ' . $info['host'] . $linebreak;
+	// 		$req .= 'User-Agent: ' . $agent . $linebreak;
+	// 		$req .= 'Referer: ' . $referer . $linebreak;
+	// 		$req .= 'Connection: Close' . $linebreak . $linebreak;
+	// 		break;
+
+	// 	case 'POST':
+	// 		$req .= 'POST ' . $info['path'] . ' HTTP/1.1' . $linebreak;
+	// 		$req .= 'Host: ' . $info['host'] . $linebreak;
+	// 		$req .= 'User-Agent: ' . $agent . $linebreak;
+	// 		$req .= 'Referer: ' . $referer . $linebreak;
+	// 		$req .= 'Content-Type: application/x-www-form-urlencoded' . $linebreak;
+	// 		$req .= 'Content-Length: ' . strlen($info['query']) . $linebreak;
+	// 		$req .= 'Connection: Close' . $linebreak . $linebreak;
+	// 		$req .= $info['query'];
+	// 		break;
+	// }
+
+	// // Socket Open
+	// $fsock = @fsockopen($info['ssl'] . $info['host'], $info['port'], $errno, $errstr);
+	// if ($fsock) {
+	// 	fwrite($fsock, $req);
+	// 	$response = "";
+	// 	while (!feof($fsock)) {
+	// 		$response .= fgets($fsock, 128);
+	// 	}
+	// 	$responseSplit = explode("\r\n\r\n", $response, 2);
+	// 	$return_val = $responseSplit[1];
+	// } else {
+	// 	import_Error_device("socket error", "[" . $errno . "] " . $errstr);
+	// }
+	// return $return_val;
+}
+
+function send_push_new_post($write_table, $bo_table, $board_subject, $board_grant_c, $wr_id, $wr_num, $wr_reply, $ca_name, $secret, $wr_subject, $wr_content, $member_id, $wr_name, $wr_file, $thumb_src = 'none')
+{
+	$gnu_config = get_gnupushapp_config();
+	if (!(is_array($gnu_config['no_use_module_srls']) && in_array($bo_table, $gnu_config['no_use_module_srls'])) && $gnu_config['use'] == "Y" && $gnu_config['use_d'] == "Y") {
+		$data = array("write_table" => $write_table, "bo_table" => $bo_table, "board_subject" => $board_subject, "board_grant_c" => $board_grant_c, "wr_id" => $wr_id, "wr_num" => $wr_num, "wr_reply" => $wr_reply, "ca_name" => $ca_name, "secret" => $secret, "wr_subject" => addslashes(cut_str($wr_subject, 50, '')), "wr_content" => addslashes(cut_str(strip_tags($wr_content), 200, '')), "member_id" => $member_id, "wr_name" => $wr_name, "wr_file" => $wr_file, "thumb_src" => $thumb_src, "m_page" => 0);
+		$gp_target_url = G5_BBS_URL . '/board.php?bo_table=' . $bo_table . '&wr_id=' . $wr_id;
+		$gp_target_title = addslashes(cut_str($wr_subject, 50, ''));
+		if ($gnu_config['push_m'] != 'S') {
+			gnu_send_socket($data, $board_subject, 'new_post', $gp_target_url, $gp_target_title);
+		} else {
+			sync_proc_push($data, $board_subject, 'new_post', $gp_target_url, $gp_target_title);
+		}
+	}
+}
+
+function send_push_new_ordersms($od_id, $mb_id_p, $sms_contents, $m_cont_num)
+{
+
+	global $config;
+
+	$gnu_config = get_gnupushapp_config();
+
+	$mb_id_p_A = array($mb_id_p);
+	if ($gnu_config['use'] == "Y" && $gnu_config['use_youngcart'] == "Y") {
+
+		$use_profile = "false";
+		$profile_link = "none";
+
+		$pushstyle = "normal";
+		$image_src = "none";
+		if ($gnu_config['push_style'] == "Y") {
+			$pushstyle = "big_text";
+		}
+		$sort = "youngcart";
+
+		if ($m_cont_num == 1) {
+
+			$address = G5_SHOP_URL . "/orderinquiryview.php?od_id=" . $od_id;
+			$title = $ticker = "[" . $gnu_config['youngcart_name'] . "] 주문하신 상품의 입금 정보입니다.";
+			$bottom_text = "[" . $gnu_config['youngcart_name'] . "] 무통장 입금정보.";
+		}
+
+		if ($m_cont_num == 2) {
+
+			$address = G5_SHOP_URL . "/orderinquiryview.php?od_id=" . $od_id;
+			$title = $ticker = "[" . $gnu_config['youngcart_name'] . "] 주문해주셔서 감사합니다.";
+			$bottom_text = "[" . $gnu_config['youngcart_name'] . "] 주문확인.";
+		}
+
+		if ($m_cont_num == 3) {
+
+			$is_parter = false;
+
+			if ($gnu_config['build_sort'] == 'A') {
+				//파트너몰이고, 상품관리자가 파트너인지 확인
+				$mb_tmp = $config['cf_admin'] . ',' . $config['as_admin'];
+				$mb_arr = explode(",", $mb_tmp);
+				$mb_arr = array_values(array_unique($mb_arr));
+				if (!in_array($mb_id_p, $mb_arr)) {
+					$is_parter = true;
+				}
+			}
+
+			if ($is_parter) {
+				$address = G5_URL . "/shop/partner/?ap=saleitem";
+			} else {
+				$address = G5_URL . "/adm/shop_admin/orderform.php?od_id=" . $od_id;
+			}
+
+			$title = $ticker = "[" . $gnu_config['youngcart_name'] . "] 주문 알림";
+			$bottom_text = "[" . $gnu_config['youngcart_name'] . "] 주문 알림.";
+		}
+
+		if ($m_cont_num == 4) {
+
+			$address = G5_SHOP_URL . "/orderinquiryview.php?od_id=" . $od_id;
+			$title = $ticker = "[" . $gnu_config['youngcart_name'] . "] 입금이 확인되었습니다.";
+			$bottom_text = "[" . $gnu_config['youngcart_name'] . "] 입금확인.";
+		}
+
+		if ($m_cont_num == 5) {
+
+			$address = G5_SHOP_URL . "/orderinquiryview.php?od_id=" . $od_id;
+			$title = $ticker = "[" . $gnu_config['youngcart_name'] . "] 주문하신 상품이 배송되었습니다.";
+			$bottom_text = "[" . $gnu_config['youngcart_name'] . "] 배송안내.";
+		}
+
+		if ($m_cont_num == 6) {
+
+			$address = G5_SHOP_URL . "/orderinquiryview.php?od_id=" . $od_id;
+			$title = $ticker = "[" . $gnu_config['youngcart_name'] . "] 주문취소가 완료되었습니다.";
+			$bottom_text = "[" . $gnu_config['youngcart_name'] . "] 주문취소.";
+		}
+
+		if ($m_cont_num == 7) {
+
+			$is_parter = false;
+
+			if ($gnu_config['build_sort'] == 'A') {
+				//파트너몰이고, 상품관리자가 파트너인지 확인
+				$mb_tmp = $config['cf_admin'] . ',' . $config['as_admin'];
+				$mb_arr = explode(",", $mb_tmp);
+				$mb_arr = array_values(array_unique($mb_arr));
+				if (!in_array($mb_id_p, $mb_arr)) {
+					$is_parter = true;
+				}
+			}
+
+			if ($is_parter) {
+				$address = G5_URL . "/shop/partner/?ap=cancelitem";
+			} else {
+				$address = G5_URL . "/adm/shop_admin/orderform.php?od_id=" . $od_id;
+			}
+
+			$title = $ticker = "[" . $gnu_config['youngcart_name'] . "] 주문취소";
+			$bottom_text = "[" . $gnu_config['youngcart_name'] . "] 주문취소.";
+		}
+
+		$etc = $use_profile . "ab&#ba" . $profile_link . "ab&#ba" . $pushstyle . "ab&#ba" . $image_src . "ab&#ba" . $ticker . "ab&#ba" . $bottom_text . "ab&#basmsab&#bafalse";
+
+		quick_send($mb_id_p_A, $title, $sms_contents, $address, $etc, $sort);
+	}
+}
+
+function get_gnu_profile_image($mb_id)
+{
+	$gnu_config = get_gnupushapp_config();
+	$mb_icon_url = "";
+	if ($gnu_config['build_sort'] == 'A') {
+		$mb_icon_path = G5_DATA_PATH . '/apms/photo/' . substr($mb_id, 0, 2) . '/' . $mb_id . '.jpg';
+		if (file_exists($mb_icon_path)) $mb_icon_url  = G5_DATA_URL . '/apms/photo/' . substr($mb_id, 0, 2) . '/' . $mb_id . '.jpg';
+	} else if ($gnu_config['build_sort'] == 'E') {
+		// global $eb;
+		// $mb_icon_url = $eb->mb_photo($mb_id);
+
+		$member_img = G5_DATA_PATH . '/member/' . substr($mb_id, 0, 2) . '/' . get_mb_icon_name($mb_id) . '.gif';
+		if (file_exists($member_img)) {
+			$mb_icon_url  = G5_DATA_URL . '/member/' . substr($mb_id, 0, 2) . '/' . get_mb_icon_name($mb_id) . '.gif';
+		}
+	} else {
+		$mb_icon_path = G5_DATA_PATH . '/member/' . substr($mb_id, 0, 2) . '/' . $mb_id . '.gif';
+		if (file_exists($mb_icon_path)) $mb_icon_url  = G5_DATA_URL . '/member/' . substr($mb_id, 0, 2) . '/' . $mb_id . '.gif';
+	}
+	return $mb_icon_url;
+}
+
+function send_push_new_orderdelivery($arr_send_p_list, $array_cont_list, $array_od_id)
+{
+
+	$gnu_config = get_gnupushapp_config();
+
+	if ($gnu_config['use'] == "Y" && $gnu_config['use_youngcart'] == "Y") {
+
+		$use_profile = "false";
+		$profile_link = "none";
+		$title = $ticker = "[" . $gnu_config['youngcart_name'] . "] 주문하신 상품이 배송되었습니다.";
+		$pushstyle = "normal";
+		$image_src = "none";
+		if ($gnu_config['push_style'] == "Y") {
+			$pushstyle = "big_text";
+		}
+		$sort = "youngcart";
+		$bottom_text = "[" . $gnu_config['youngcart_name'] . "] 배송안내.";
+		$etc = $use_profile . "ab&#ba" . $profile_link . "ab&#ba" . $pushstyle . "ab&#ba" . $image_src . "ab&#ba" . $ticker . "ab&#ba" . $bottom_text . "ab&#basmsab&#bafalse";
+
+		for ($i = 0; $i < count($arr_send_p_list); $i++) {
+			$address = G5_SHOP_URL . "/orderinquiryview.php?od_id=" . $array_od_id[$i];
+			$content = $array_cont_list[$i];
+			$mb_id_arr = array();
+			$mb_id_arr[] = $arr_send_p_list[$i];
+			quick_send($mb_id_arr, $title, $content, $address, $etc, $sort);
+		}
+	}
+}
+
+
+function send_push_new_coupon($chk_all_mb, $cp_subject, $cp_end, $cp_method, $cp_target, $cp_type, $cp_price, $arr_send_p_list, $p_subject, $p_contents, $cf_admin)
+{
+
+	global $g5;
+	$gnu_config = get_gnupushapp_config();
+	if ($gnu_config['use'] == "Y" && $gnu_config['use_youngcart'] == "Y") {
+
+		if ($cp_type) {
+			$price = $cp_price . "% 할인";
+		} else {
+			$price = number_format($cp_price) . "원 할인";
+		}
+
+		switch ($cp_method) {
+			case 0:
+				$sql = " select * from {$g5['g5_shop_item_table']} where it_id = '$cp_target' and it_nocoupon = '0' ";
+				$row_it = sql_fetch($sql);
+				$coupon_method = '개별상품할인 - [' . addslashes($row_it['it_name']) . '] ' . $price;
+				break;
+
+			case 1:
+				$sql = " select * from {$g5['g5_shop_category_table']} where ca_id = '$cp_target' and ca_nocoupon = '0' ";
+				$row = sql_fetch($sql);
+				$coupon_method = '카테고리할인 - [분류명 : ' . $row['ca_name'] . '] ' . $price;
+
+			case 2:
+				$coupon_method = '결제금액할인';
+				break;
+			case 3:
+				$coupon_method = '배송비할인';
+				break;
+			default:
+				$coupon_method = '개별상품할인';
+				break;
+		}
+		$p_contents = '쿠폰명 : ' . $cp_subject;
+		$p_contents .= ' / 적용대상 : ' . $coupon_method;
+		$p_contents .= ' / 쿠폰만료 : ' . $cp_end;
+		$p_subject = $cp_subject . ' 쿠폰이 회원님께 발행됐습니다.';
+
+		$address = G5_SHOP_URL . "/mypage.php";
+		//$address = G5_SHOP_URL."/item.php?it_id=".;
+
+		if ($chk_all_mb) {
+
+			$data = array("p_subject" => $p_subject, "p_contents" => $p_contents, "cf_admin" => $cf_admin, "m_page" => 0);
+			$gp_target_url = G5_URL . '/adm/shop_admin/couponlist.php';
+			$gp_target_title = cut_str($p_contents, 50, '');
+			if ($gnu_config['push_m'] != 'S') {
+				gnu_send_socket($data, 'Coupon', 'new_coupon', $gp_target_url, $gp_target_title);
+			} else {
+				sync_proc_push($data, 'Coupon', 'new_coupon', $gp_target_url, $gp_target_title);
+			}
+		} else {
+
+			$use_profile = "false";
+			$profile_link = "none";
+			$title = $ticker = $p_subject;
+			$content = $p_contents;
+			$pushstyle = "normal";
+			$image_src = "none";
+			if ($gnu_config['push_style'] == "Y") {
+				$pushstyle = "big_text";
+			}
+			$sort = "must";
+			$bottom_text = $gnu_config['youngcart_name'] . " 쿠폰 지급";
+			$etc = $use_profile . "ab&#ba" . $profile_link . "ab&#ba" . $pushstyle . "ab&#ba" . $image_src . "ab&#ba" . $ticker . "ab&#ba" . $bottom_text . "ab&#basmsab&#bafalse";
+			quick_send($arr_send_p_list, $title, $content, $address, $etc, $sort);
+		}
+	}
+}
+
+function send_push_new_qa($w, $qa_id, $qa_subject, $qa_content, $write_md_id, $target_md_id, $qa_title, $thumb_src, $mb_nick)
+{
+	$gnu_config = get_gnupushapp_config();
+
+	if ($gnu_config['use'] == "Y") {
+
+		$use_profile = "false";
+		$profile_link = "none";
+
+		$mb_icon_url = get_gnu_profile_image($write_md_id);
+
+		if ($mb_icon_url) {
+			$use_profile = "true";
+			$profile_link = $mb_icon_url;
+		} else {
+			$member_wr = get_member($write_md_id);
+			if ($member_wr['mb_7']) {
+				$use_profile = "true";
+				$profile_link = $member_wr['mb_7'];
+			}
+		}
+		if ($gnu_config['profile_p'] == "N") {
+			$use_profile = "false";
+			$profile_link = "none";
+		}
+
+		$title = $qa_subject;
+		$title = str_replace(array('&lt;', '&gt;', '&quot;', '&nbsp;', '&amp;', '&#034;'), array('<', '>', '"', ' ', '&', '"'), stripslashes($title));
+
+		$content = cut_str(strip_tags($qa_content), 200, '');
+		$content = str_replace(array('&lt;', '&gt;', '&quot;', '&nbsp;', '&amp;', '&#034;'), array('<', '>', '"', ' ', '&', '"'), stripslashes($content));
+
+		$address = G5_BBS_URL . '/qaview.php?qa_id=' . $qa_id;
+
+		$pushstyle = "normal";
+		$image_src = "none";
+
+		if ($gnu_config['push_style'] == "Y") {
+			$pushstyle = "big_text";
+			if ($thumb_src != 'none') {
+
+
+				$file = G5_DATA_PATH . '/qa/' . $thumb_src;
+				if (is_file($file)) {
+					$width = 500;
+					$height = 250;
+
+					$filename = basename($file);
+					$filepath = dirname($file);
+
+					if ($filename) {
+						$thumb = thumbnail($filename, $filepath, $filepath, $width, $height, false, true, 'center', false, $um_value = '80/0.5/3');
+					}
+
+					if ($thumb) {
+						$image_src = str_replace(G5_PATH, G5_URL, $filepath . '/' . $thumb);
+						$pushstyle = "big_picture";
+					} else {
+						$pushstyle = "big_text";
+					}
+				}
+			}
+		}
+
+		$member_ids = array($target_md_id);
+
+		if ($w == "" || $w == "r") {
+			$sort = "notice";
+			$ticker = $qa_title . "에 새 문의글이 올라왔습니다.";
+			$bottom_text = $mb_nick . "님 작성 / " . $qa_title;
+			$etc = $use_profile . "ab&#ba" . $profile_link . "ab&#ba" . $pushstyle . "ab&#ba" . $image_src . "ab&#ba" . $ticker . "ab&#ba" . $bottom_text . "ab&#basmsab&#bafalse";
+			quick_send($member_ids, $title, $content, $address, $etc, $sort);
+		} elseif ($w == "a") {
+
+			$sort = "myreply";
+			$ticker = $qa_title . "에 답변이 올라왔습니다.";
+			$bottom_text = $mb_nick . "님 작성 / " . $qa_title;
+			$etc = $use_profile . "ab&#ba" . $profile_link . "ab&#ba" . $pushstyle . "ab&#ba" . $image_src . "ab&#ba" . $ticker . "ab&#ba" . $bottom_text . "ab&#basmsab&#bafalse";
+			quick_send($member_ids, $title, $content, $address, $etc, $sort);
+		}
+	}
+}
+
+function send_push_new_item_qa($it_id, $member_id, $iq_name, $iq_subject, $iq_question)
+{
+}
+
+function send_push_new_product($it_id, $it_name, $it_explan, $it_price, $type_item_p, $category_item)
+{
+	$gnu_config = get_gnupushapp_config();
+	if ($gnu_config['use'] == "Y" && $gnu_config['use_youngcart'] == "Y") {
+
+		$it_name_c = cut_str($it_name, 50, '');
+		$it_explan_c = cut_str(strip_tags($it_explan), 200, '');
+		$gp_target_url = G5_URL . '/shop/item.php?it_id=' . $it_id;
+		$gp_target_title = $it_name_c;
+		$data = array("it_id" => $it_id, "it_name" => $it_name_c, "it_explan" => $it_explan_c, "it_price" => $it_price, "type_item_p" => $type_item_p, "category_item" => $category_item, "m_page" => 0);
+		if ($gnu_config['push_m'] != 'S') {
+
+			gnu_send_socket($data, 'Youngcart5', 'new_product', $gp_target_url, $gp_target_title);
+		} else {
+			sync_proc_push($data, 'Youngcart5', 'new_product', $gp_target_url, $gp_target_title);
+		}
+	}
+}
+
+function send_push_new_item_cqa($flag, $it_id, $wr_id, $it_name, $wr_subject, $wr_content, $pt_adm_id, $rec_mb_id, $wr_mb_id, $wr_name, $comment_id)
+{
+	$gnu_config = get_gnupushapp_config();
+	if ($gnu_config['use'] == "Y" && $gnu_config['use_youngcart'] == "Y" && $rec_mb_id != $wr_mb_id) {
+
+		if ($flag == 'reply' || $flag == 'qa' || $flag == 'use' || $flag == 'comment' || $flag == 'comment_reply' || $flag == 'use_reply') {
+			$member_ids = array($rec_mb_id);
+
+			if ($wr_subject) {
+				$subject = str_replace(array('&lt;', '&gt;', '&quot;', '&nbsp;', '&amp;'), array('<', '>', '"', ' ', '&'), strip_tags($wr_subject));
+				$subject = cut_str($subject, 100, "...");
+			}
+			$content_d = str_replace(array('&lt;', '&gt;', '&quot;', '&nbsp;', '&amp;'), array('<', '>', '"', ' ', '&'), strip_tags($wr_content));
+			$content_d = cut_str($content_d, 200, "...");
+
+			$use_profile = "false";
+			$profile_link = "none";
+
+			$mb_icon_url = get_gnu_profile_image($wr_mb_id);
+
+			if ($mb_icon_url) {
+				$use_profile = "true";
+				$profile_link = $mb_icon_url;
+			}
+
+			if ($gnu_config['profile_p'] == "N") {
+				$use_profile = "false";
+				$profile_link = "none";
+			}
+
+			$pushstyle = "normal";
+			$image_src = "none";
+			$pushstyle = "big_text";
+			$type = "sms";
+			$banner = "headsup";
+			$sort = "youngcart";
+			$item_name = cut_str($it_name, 20, "...");
+
+			if ($flag == 'reply') {
+				$title = '[문의답변] ' . $subject;
+				$content = $content_d;
+				$ticker = '회원님의 문의글에 답변이 달렸습니다.';
+				$bottom_text = $wr_name . "님 작성 / " . $item_name;
+				$address = G5_SHOP_URL . '/itemqaview.php?iq_id=' . $wr_id;
+			} else if ($flag == 'qa') {
+				$title = '[상품문의] ' . $subject;
+				$content = $content_d;
+				$ticker = $wr_name . '님이 상품 문의글을 작성하였습니다.';
+				$bottom_text = $wr_name . "님 작성 / " . $item_name;
+				$address = G5_SHOP_URL . '/itemqaview.php?iq_id=' . $wr_id;
+			} else if ($flag == 'use' || $flag == 'use_reply') {
+
+				if ($flag == 'use_reply') {
+					$title = '[후기 확인] ' . $subject;
+				} else {
+					$title = '[후기] ' . $subject;
+				}
+				$content = $content_d;
+				$ticker = $wr_name . '님이 상품 후기글을 작성하였습니다.';
+				$bottom_text = $wr_name . "님 작성 / " . $item_name;
+				$address = G5_SHOP_URL . '/itemuseview.php?is_id=' . $wr_id;
+			} else if ($flag == 'comment' || $flag == 'comment_reply') {
+
+				if ($flag == 'comment') {
+					$title = $ticker = "[" . $item_name . ']상품에 새 댓글이 달렸습니다.';
+				} else {
+					$title = $ticker = '회원님의 상품 댓글에 대댓글이 달렸습니다.';
+				}
+				$content = $content_d;
+				$bottom_text = $wr_name . "님 작성 / " . $item_name;
+				$address = G5_SHOP_URL . '/item.php?it_id=' . $it_id . '#c_' . $c_id;
+			}
+
+			$etc = $use_profile . "ab&#ba" . $profile_link . "ab&#ba" . $pushstyle . "ab&#ba" . $image_src . "ab&#ba" . $ticker . "ab&#ba" . $bottom_text . "ab&#ba" . $type . "ab&#ba" . $banner;
+			quick_send($member_ids, $title, $content, $address, $etc, $sort);
+		}
+	}
+}
+
+function send_push_new_comment($write_table, $bo_table, $board_subject, $board_grant_c, $wr_parent, $comment_id, $comment, $comment_reply, $ca_name, $secret, $wr_content, $member_id, $wr_name)
+{
+	$gnu_config = get_gnupushapp_config();
+	if (!(is_array($gnu_config['no_use_module_srls']) && in_array($bo_table, $gnu_config['no_use_module_srls'])) && $gnu_config['use'] == "Y" && $gnu_config['use_c'] == "Y") {
+		$data = array("write_table" => $write_table, "bo_table" => $bo_table, "board_subject" => $board_subject, "board_grant_c" => $board_grant_c, "wr_parent" => $wr_parent, "comment_id" => $comment_id, "comment" => $comment, "comment_reply" => $comment_reply, "ca_name" => $ca_name, "secret" => $secret, "wr_content" => addslashes(cut_str(strip_tags($wr_content), 200, '')), "member_id" => $member_id, "wr_name" => $wr_name, "m_page" => 0);
+		$gp_target_url = G5_BBS_URL . '/board.php?bo_table=' . $bo_table . '&wr_id=' . $wr_parent . '#c_' . $comment_id;
+		$gp_target_title = addslashes(cut_str(strip_tags($wr_content), 50, ''));
+		if ($gnu_config['push_m'] != 'S') {
+			gnu_send_socket($data, $board_subject, 'new_comment', $gp_target_url, $gp_target_title);
+		} else {
+			sync_proc_push($data, $board_subject, 'new_comment', $gp_target_url, $gp_target_title);
+		}
+	}
+}
+
+function send_push_new_memo($recv_mb_id, $member_id, $me_memo, $me_id)
+{
+	$gnu_config = get_gnupushapp_config();
+	if ($gnu_config['use'] == "Y" && $gnu_config['use_m'] == "Y") {
+		$message = str_replace(array('&lt;', '&gt;', '&quot;', '&nbsp;', '&amp;'), array('<', '>', '"', ' ', '&'), strip_tags($me_memo));
+		$data = array("recv_mb_id" => $recv_mb_id, "me_memo" => addslashes(cut_str($me_memo, 200, '')), "member_id" => $member_id, "me_id" => $me_id);
+		$gp_target_url = G5_BBS_URL . '/memo_view.php?me_id=' . $me_id . '&kind=recv';
+		$gp_target_title = '쪽지 메시지';
+		if ($gnu_config['push_m'] != 'S') {
+			gnu_send_socket($data, 'memo', 'new_memo', $gp_target_url, $gp_target_title);
+		} else {
+			sync_proc_push($data, 'memo', 'new_memo', $gp_target_url, $gp_target_title);
+		}
+	}
+}
+
+function import_Error_device($reg_id, $error_m)
+{
+	sql_query(" INSERT INTO g5_gnupushapp_errorlog 
+					set ge_reg_id = '{$reg_id}',
+					ge_text = '{$error_m}',
+					ge_regdate = '" . G5_TIME_YMDHIS . "'
+					", true);
+}
+
+function get_gnupushapp_config()
+{
+
+	global $config;
+
+	$gnupushapp_config = sql_fetch(" select * from g5_gnupushapp_config ");
+	$gnu_config_gnu = unserialize(base64_decode($gnupushapp_config["gc_text"]));
+
+	if (!$gnu_config_gnu['choose_board_keyword']) $gnu_config_gnu['choose_board_keyword'] = 'N';
+	if (!$gnu_config_gnu['youngcart_keyword']) $gnu_config_gnu['youngcart_keyword'] = 'N';
+	if (!$gnu_config_gnu["bottom_menu_style"]) $gnu_config_gnu["bottom_menu_style"] = 'C';
+
+	if (!$gnu_config_gnu['bottom_menuc1_link']) $gnu_config_gnu['bottom_menuc1_link'] = 'back';
+	if (!$gnu_config_gnu['bottom_menuc1_icon']) $gnu_config_gnu['bottom_menuc1_icon'] = 'fa-arrow-left';
+
+	if (!$gnu_config_gnu['bottom_menuc2_link']) $gnu_config_gnu['bottom_menuc2_link'] = 'forward';
+	if (!$gnu_config_gnu['bottom_menuc2_icon']) $gnu_config_gnu['bottom_menuc2_icon'] = 'fa-arrow-right';
+
+	if (!$gnu_config_gnu['bottom_menuc3_link']) $gnu_config_gnu['bottom_menuc3_link'] = 'home';
+	if (!$gnu_config_gnu['bottom_menuc3_icon']) $gnu_config_gnu['bottom_menuc3_icon'] = 'fa-home';
+
+	if (!$gnu_config_gnu['bottom_menuc4_link']) $gnu_config_gnu['bottom_menuc4_link'] = 'refresh';
+	if (!$gnu_config_gnu['bottom_menuc4_icon']) $gnu_config_gnu['bottom_menuc4_icon'] = 'fa-refresh';
+
+	if (!$gnu_config_gnu['bottom_menuc5_link']) $gnu_config_gnu['bottom_menuc5_link'] = 'login';
+	if (!$gnu_config_gnu['bottom_menuc5_icon']) $gnu_config_gnu['bottom_menuc5_icon'] = 'fa-user';
+
+	if (!$gnu_config_gnu['bottom_menuc6_link']) $gnu_config_gnu['bottom_menuc6_link'] = 'setting';
+	if (!$gnu_config_gnu['bottom_menuc6_icon']) $gnu_config_gnu['bottom_menuc6_icon'] = 'fa-cog';
+
+	if (!$gnu_config_gnu['bottom_menuc7_link']) $gnu_config_gnu['bottom_menuc7_link'] = 'finish';
+	if (!$gnu_config_gnu['bottom_menuc7_icon']) $gnu_config_gnu['bottom_menuc7_icon'] = 'fa-power-off';
+
+	if (!$gnu_config_gnu['bottom_menuc8_link']) $gnu_config_gnu['bottom_menuc8_link'] = 'javascript:window.open(\'' . G5_URL . '/bbs/memo.php\', \'\');';
+	if (!$gnu_config_gnu['bottom_menuc8_icon']) $gnu_config_gnu['bottom_menuc8_icon'] = 'fa-envelope';
+
+	if (!$gnu_config_gnu['bottom_menu1']) $gnu_config_gnu['bottom_menu1'] = '홈으로';
+	if (!$gnu_config_gnu['bottom_menu1_link']) $gnu_config_gnu['bottom_menu1_link'] = 'home';
+	if (!$gnu_config_gnu['bottom_menu1_icon']) $gnu_config_gnu['bottom_menu1_icon'] = 'fa-home';
+
+	if (!$gnu_config_gnu['bottom_menu2']) $gnu_config_gnu['bottom_menu2'] = '로그인';
+	if (!$gnu_config_gnu['bottom_menu2_link']) $gnu_config_gnu['bottom_menu2_link'] = 'login';
+	if (!$gnu_config_gnu['bottom_menu2_icon']) $gnu_config_gnu['bottom_menu2_icon'] = 'fa-user';
+
+	if (!$gnu_config_gnu['bottom_menu3']) $gnu_config_gnu['bottom_menu3'] = '설정';
+	if (!$gnu_config_gnu['bottom_menu3_link']) $gnu_config_gnu['bottom_menu3_link'] = 'setting';
+	if (!$gnu_config_gnu['bottom_menu3_icon']) $gnu_config_gnu['bottom_menu3_icon'] = 'fa-cog';
+
+	if (!$gnu_config_gnu['bottom_menu4']) $gnu_config_gnu['bottom_menu4'] = '1:1문의';
+	if (!$gnu_config_gnu['bottom_menu4_link']) $gnu_config_gnu['bottom_menu4_link'] = G5_URL . '/bbs/qalist.php';
+	if (!$gnu_config_gnu['bottom_menu4_icon']) $gnu_config_gnu['bottom_menu4_icon'] = 'fa-question-circle-o';
+
+	if (!$gnu_config_gnu['bottom_menu5']) $gnu_config_gnu['bottom_menu5'] = '쪽지함';
+	if (!$gnu_config_gnu['bottom_menu5_link']) $gnu_config_gnu['bottom_menu5_link'] = 'javascript:window.open(\'' . G5_URL . '/bbs/memo.php\', \'\');';
+	if (!$gnu_config_gnu['bottom_menu5_icon']) $gnu_config_gnu['bottom_menu5_icon'] = 'fa-envelope';
+
+	if (!$gnu_config_gnu['bottom_menu6']) $gnu_config_gnu['bottom_menu6'] = '앱종료';
+	if (!$gnu_config_gnu['bottom_menu6_link']) $gnu_config_gnu['bottom_menu6_link'] = 'finish';
+	if (!$gnu_config_gnu['bottom_menu6_icon']) $gnu_config_gnu['bottom_menu6_icon'] = 'fa-power-off';
+
+	if (!$gnu_config_gnu['loading_file_name']) $gnu_config_gnu['loading_file_name'] = 'none';
+
+	if (!$gnu_config_gnu['bottom_menu_c']) $gnu_config_gnu['bottom_menu_c'] = '#000000';
+
+
+	////////////////////////////
+
+	if (!$gnu_config_gnu["bottom_menu_stylei"]) $gnu_config_gnu["bottom_menu_stylei"] = 'C';
+
+	if (!$gnu_config_gnu['bottom_menuc1_linki']) $gnu_config_gnu['bottom_menuc1_linki'] = 'back';
+	if (!$gnu_config_gnu['bottom_menuc1_iconi']) $gnu_config_gnu['bottom_menuc1_iconi'] = 'fa-arrow-left';
+
+	if (!$gnu_config_gnu['bottom_menuc2_linki']) $gnu_config_gnu['bottom_menuc2_linki'] = 'forward';
+	if (!$gnu_config_gnu['bottom_menuc2_iconi']) $gnu_config_gnu['bottom_menuc2_iconi'] = 'fa-arrow-right';
+
+	if (!$gnu_config_gnu['bottom_menuc3_linki']) $gnu_config_gnu['bottom_menuc3_linki'] = 'home';
+	if (!$gnu_config_gnu['bottom_menuc3_iconi']) $gnu_config_gnu['bottom_menuc3_iconi'] = 'fa-home';
+
+	if (!$gnu_config_gnu['bottom_menuc4_linki']) $gnu_config_gnu['bottom_menuc4_linki'] = 'refresh';
+	if (!$gnu_config_gnu['bottom_menuc4_iconi']) $gnu_config_gnu['bottom_menuc4_iconi'] = 'fa-refresh';
+
+	if (!$gnu_config_gnu['bottom_menuc5_linki']) $gnu_config_gnu['bottom_menuc5_linki'] = 'login';
+	if (!$gnu_config_gnu['bottom_menuc5_iconi']) $gnu_config_gnu['bottom_menuc5_iconi'] = 'fa-user';
+
+	if (!$gnu_config_gnu['bottom_menuc6_linki']) $gnu_config_gnu['bottom_menuc6_linki'] = G5_URL . '/bbs/qalist.php';
+	if (!$gnu_config_gnu['bottom_menuc6_iconi']) $gnu_config_gnu['bottom_menuc6_iconi'] = 'fa-question-circle-o';
+
+	if (!$gnu_config_gnu['bottom_menuc7_linki']) $gnu_config_gnu['bottom_menuc7_linki'] = 'setting';
+	if (!$gnu_config_gnu['bottom_menuc7_iconi']) $gnu_config_gnu['bottom_menuc7_iconi'] = 'fa-cog';
+
+	if (!$gnu_config_gnu['bottom_menuc8_linki']) $gnu_config_gnu['bottom_menuc8_linki'] = 'javascript:window.open(\'' . G5_URL . '/bbs/memo.php\', \'\');';
+	if (!$gnu_config_gnu['bottom_menuc8_iconi']) $gnu_config_gnu['bottom_menuc8_iconi'] = 'fa-envelope';
+
+	if (!$gnu_config_gnu['bottom_menu1i']) $gnu_config_gnu['bottom_menu1i'] = '홈으로';
+	if (!$gnu_config_gnu['bottom_menu1_linki']) $gnu_config_gnu['bottom_menu1_linki'] = 'home';
+	if (!$gnu_config_gnu['bottom_menu1_iconi']) $gnu_config_gnu['bottom_menu1_iconi'] = 'fa-home';
+
+	if (!$gnu_config_gnu['bottom_menu2i']) $gnu_config_gnu['bottom_menu2i'] = '로그인';
+	if (!$gnu_config_gnu['bottom_menu2_linki']) $gnu_config_gnu['bottom_menu2_linki'] = 'login';
+	if (!$gnu_config_gnu['bottom_menu2_iconi']) $gnu_config_gnu['bottom_menu2_iconi'] = 'fa-user';
+
+	if (!$gnu_config_gnu['bottom_menu3i']) $gnu_config_gnu['bottom_menu3i'] = '1:1문의';
+	if (!$gnu_config_gnu['bottom_menu3_linki']) $gnu_config_gnu['bottom_menu3_linki'] = G5_URL . '/bbs/qalist.php';
+	if (!$gnu_config_gnu['bottom_menu3_iconi']) $gnu_config_gnu['bottom_menu3_iconi'] = 'fa-question-circle-o';
+
+	if (!$gnu_config_gnu['bottom_menu4i']) $gnu_config_gnu['bottom_menu4i'] = '설정';
+	if (!$gnu_config_gnu['bottom_menu4_linki']) $gnu_config_gnu['bottom_menu4_linki'] = 'setting';
+	if (!$gnu_config_gnu['bottom_menu4_iconi']) $gnu_config_gnu['bottom_menu4_iconi'] = 'fa-cog';
+
+	if (!$gnu_config_gnu['bottom_menu5i']) $gnu_config_gnu['bottom_menu5i'] = '쪽지함';
+	if (!$gnu_config_gnu['bottom_menu5_linki']) $gnu_config_gnu['bottom_menu5_linki'] = 'fihish';
+	if (!$gnu_config_gnu['bottom_menu5_iconi']) $gnu_config_gnu['bottom_menu5_iconi'] = 'fa-envelope';
+
+	if (!$gnu_config_gnu['bottom_menu6i']) $gnu_config_gnu['bottom_menu6i'] = '포인트';
+	if (!$gnu_config_gnu['bottom_menu6_linki']) $gnu_config_gnu['bottom_menu6_linki'] = 'javascript:window.open(\'' . G5_URL . '/bbs/point.php\', \'\');';
+	if (!$gnu_config_gnu['bottom_menu6_iconi']) $gnu_config_gnu['bottom_menu6_iconi'] = 'fa-coins';
+
+
+	if (!$gnu_config_gnu['bottom_menu1_colori']) $gnu_config_gnu['bottom_menu1_colori'] = '#555555';
+	if (!$gnu_config_gnu['bottom_menu2_colori']) $gnu_config_gnu['bottom_menu2_colori'] = '#555555';
+	if (!$gnu_config_gnu['bottom_menu3_colori']) $gnu_config_gnu['bottom_menu3_colori'] = '#555555';
+	if (!$gnu_config_gnu['bottom_menu4_colori']) $gnu_config_gnu['bottom_menu4_colori'] = '#555555';
+	if (!$gnu_config_gnu['bottom_menu5_colori']) $gnu_config_gnu['bottom_menu5_colori'] = '#555555';
+	if (!$gnu_config_gnu['bottom_menu6_colori']) $gnu_config_gnu['bottom_menu6_colori'] = '#555555';
+
+	if (!$gnu_config_gnu['interstitial_admob_r']) $gnu_config_gnu['interstitial_admob_r'] = 'N';
+	if (!$gnu_config_gnu['interstitial_admob_num']) $gnu_config_gnu['interstitial_admob_num'] = '30';
+
+	if (!$gnu_config_gnu['use_chat']) $gnu_config_gnu['use_chat'] = 'N';
+	if (!$gnu_config_gnu['chat_message']) $gnu_config_gnu['chat_message'] = 'Y';
+	if (!$gnu_config_gnu['chatting_admin']) $gnu_config_gnu['chatting_admin'] = 'Y';
+	if (!$gnu_config_gnu['chatting_free']) $gnu_config_gnu['chatting_free'] = 'Y';
+	if (!$gnu_config_gnu['chatting_room_open']) $gnu_config_gnu['chatting_room_open'] = 'Y';
+	if (!$gnu_config_gnu['use_chatting_button']) $gnu_config_gnu['use_chatting_button'] = 'N';
+	if (!$gnu_config_gnu['chatting_target']) $gnu_config_gnu['chatting_target'] = 'mylist';
+	if (!$gnu_config_gnu['chatting_admin_id']) $gnu_config_gnu['chatting_admin_id'] = $config['cf_admin'];
+	if (!$gnu_config_gnu['chatting_delete_term']) $gnu_config_gnu['chatting_delete_term'] = '30';
+
+	if (!$gnu_config_gnu['chatting_file']) $gnu_config_gnu['chatting_file'] = 'Y';
+
+	if (!$gnu_config_gnu['eventlink0_term']) $gnu_config_gnu['eventlink0_term'] = '7';
+
+	////////////////////////////
+
+	if (!$gnu_config_gnu['bottom_menu_fonti']) $gnu_config_gnu['bottom_menu_fonti'] = 'F';
+	if (!$gnu_config_gnu['bottom_menu_font']) $gnu_config_gnu['bottom_menu_font'] = 'F';
+	if (!$gnu_config_gnu['quick_menu_font']) $gnu_config_gnu['quick_menu_font'] = 'F';
+
+	if (!$gnu_config_gnu['quick_login']) $gnu_config_gnu['quick_login'] = '쪽지함';
+	if (!$gnu_config_gnu['quick_login_link']) $gnu_config_gnu['quick_login_link'] = 'javascript:window.open(\'' . G5_URL . '/bbs/memo.php\', \'\');';
+	if (!$gnu_config_gnu['quick_login_icon']) $gnu_config_gnu['quick_login_icon'] = 'fa-envelope';
+	if (!$gnu_config_gnu['quick_login_color']) $gnu_config_gnu['quick_login_color'] = '#5C5C5C';
+	if (!$gnu_config_gnu['back_finish']) $gnu_config_gnu['back_finish'] = 'A';
+	if (!$gnu_config_gnu['use_kakao_link']) $gnu_config_gnu['use_kakao_link'] = 'N';
+
+	if (!$gnu_config_gnu['quick_bottom_margin']) $gnu_config_gnu['quick_bottom_margin'] = '0';
+	if (!$gnu_config_gnu['list_show']) $gnu_config_gnu['list_show'] = '30';
+	if (!$gnu_config_gnu['appcache']) $gnu_config_gnu['appcache'] = 'abcdefghij';
+	if (!$gnu_config_gnu['bottom_menu1_color']) $gnu_config_gnu['bottom_menu1_color'] = '#555555';
+	if (!$gnu_config_gnu['bottom_menu2_color']) $gnu_config_gnu['bottom_menu2_color'] = '#555555';
+	if (!$gnu_config_gnu['bottom_menu3_color']) $gnu_config_gnu['bottom_menu3_color'] = '#555555';
+	if (!$gnu_config_gnu['bottom_menu4_color']) $gnu_config_gnu['bottom_menu4_color'] = '#555555';
+	if (!$gnu_config_gnu['bottom_menu5_color']) $gnu_config_gnu['bottom_menu5_color'] = '#555555';
+	if (!$gnu_config_gnu['bottom_menu6_color']) $gnu_config_gnu['bottom_menu6_color'] = '#555555';
+	if (!$gnu_config_gnu['bottom_menuc1_color']) $gnu_config_gnu['bottom_menuc1_color'] = '#555555';
+	if (!$gnu_config_gnu['bottom_menuc2_color']) $gnu_config_gnu['bottom_menuc2_color'] = '#555555';
+	if (!$gnu_config_gnu['bottom_menuc3_color']) $gnu_config_gnu['bottom_menuc3_color'] = '#555555';
+	if (!$gnu_config_gnu['bottom_menuc4_color']) $gnu_config_gnu['bottom_menuc4_color'] = '#555555';
+	if (!$gnu_config_gnu['bottom_menuc5_color']) $gnu_config_gnu['bottom_menuc5_color'] = '#555555';
+	if (!$gnu_config_gnu['bottom_menuc6_color']) $gnu_config_gnu['bottom_menuc6_color'] = '#555555';
+	if (!$gnu_config_gnu['bottom_menuc7_color']) $gnu_config_gnu['bottom_menuc7_color'] = '#555555';
+	if (!$gnu_config_gnu['bottom_menuc8_color']) $gnu_config_gnu['bottom_menuc8_color'] = '#555555';
+
+	if (!$gnu_config_gnu['default_push']) $gnu_config_gnu['default_push'] = 'Y';
+	if (!$gnu_config_gnu['wake_lock']) $gnu_config_gnu['wake_lock'] = 'Y';
+	if (!$gnu_config_gnu['headsup_push_style']) $gnu_config_gnu['headsup_push_style'] = 'Y';
+	if (!$gnu_config_gnu['popup_push_style']) $gnu_config_gnu['popup_push_style'] = 'N';
+	if (!$gnu_config_gnu['interstitial_admob']) $gnu_config_gnu['interstitial_admob'] = 'Y';
+	if (!$gnu_config_gnu['nologinB']) $gnu_config_gnu['nologinB'] = 'T';
+	if (!$gnu_config_gnu['banner_admob']) $gnu_config_gnu['banner_admob'] = 'Y';
+
+	if (!$gnu_config_gnu['notevi']) $gnu_config_gnu['notevi'] = 'N';
+	if (!$gnu_config_gnu['webview_versioni']) $gnu_config_gnu['webview_versioni'] = '1(1.0)';
+	if (!$gnu_config_gnu['push_delay']) $gnu_config_gnu['push_delay'] = 0;
+	if (!$gnu_config_gnu['mypushlist']) $gnu_config_gnu['mypushlist'] = 'N';
+	if (!$gnu_config_gnu['marketing_push']) $gnu_config_gnu['marketing_push'] = 'N';
+
+	if (!$gnu_config_gnu['masterpassword']) $gnu_config_gnu['masterpassword'] = get_random_string_gnu('32');
+	if (!$gnu_config_gnu['use']) $gnu_config_gnu['use'] = 'Y';
+	if (!$gnu_config_gnu['setting_f']) $gnu_config_gnu['setting_f'] = array("g");
+	if (!$gnu_config_gnu['setting_a']) $gnu_config_gnu['setting_a'] = array("c", "d", "e", "f", "g", "h");
+	if (!$gnu_config_gnu['quick_default']) $gnu_config_gnu['quick_default'] = array("a", "b");
+	if (!$gnu_config_gnu['sort_v']) $gnu_config_gnu['sort_v'] = 'W';
+	if (!$gnu_config_gnu['change_a']) $gnu_config_gnu['change_a'] = 'Y';
+	if (!$gnu_config_gnu['change_f']) $gnu_config_gnu['change_f'] = 'Y';
+	if (!$gnu_config_gnu['onlysocial']) $gnu_config_gnu['onlysocial'] = 'N';
+	if (!$gnu_config_gnu['board_grant']) $gnu_config_gnu['board_grant'] = 'Y';
+	if (!$gnu_config_gnu['board_grant_c']) $gnu_config_gnu['board_grant_c'] = 'bo_read_level';
+	if (!$gnu_config_gnu['use_d']) $gnu_config_gnu['use_d'] = 'Y';
+	if (!$gnu_config_gnu['use_c']) $gnu_config_gnu['use_c'] = 'Y';
+	if (!$gnu_config_gnu['use_m']) $gnu_config_gnu['use_m'] = 'Y';
+	if (!$gnu_config_gnu['use_v']) $gnu_config_gnu['use_v'] = 'N';
+	if (!$gnu_config_gnu['use_mention']) $gnu_config_gnu['use_mention'] = 'N';
+	if (!$gnu_config_gnu['push_style']) $gnu_config_gnu['push_style'] = 'Y';
+	if (!$gnu_config_gnu['push_style_m']) $gnu_config_gnu['push_style_m'] = 'N';
+	if (!$gnu_config_gnu['notev']) $gnu_config_gnu['notev'] = 'J';
+	if (!$gnu_config_gnu['change_s']) $gnu_config_gnu['change_s'] = 'Y';
+	if (!$gnu_config_gnu['profile_p']) $gnu_config_gnu['profile_p'] = 'Y';
+	if (!$gnu_config_gnu['google']) $gnu_config_gnu['google'] = 'Y';
+	if (!$gnu_config_gnu['fileorlink']) $gnu_config_gnu['fileorlink'] = 'Y';
+	if (!$gnu_config_gnu['vote']) $gnu_config_gnu['vote'] = 'E';
+	if (!$gnu_config_gnu['comment_s']) $gnu_config_gnu['comment_s'] = 'S';
+	if (!$gnu_config_gnu['choose_board_s']) $gnu_config_gnu['choose_board_s'] = 'N';
+	if (!$gnu_config_gnu['board_s']) $gnu_config_gnu['board_s'] = 'S';
+	if (!$gnu_config_gnu['choose_board']) $gnu_config_gnu['choose_board'] = 'Y';
+	if (!$gnu_config_gnu['push_style_bp']) $gnu_config_gnu['push_style_bp'] = 'Y';
+	if (!$gnu_config_gnu['loginpage']) $gnu_config_gnu['loginpage'] = 'Y';
+	if (!$gnu_config_gnu['menubutton']) $gnu_config_gnu['menubutton'] = 'N';
+	if (!$gnu_config_gnu['nologin']) $gnu_config_gnu['nologin'] = 'Y';
+	if (!$gnu_config_gnu['intro_s']) $gnu_config_gnu['intro_s'] = '2';
+	if (!$gnu_config_gnu['use_quick']) $gnu_config_gnu['use_quick'] = 'Y';
+	if (!$gnu_config_gnu['quick_p']) $gnu_config_gnu['quick_p'] = 'R';
+	if (!$gnu_config_gnu['first_page']) $gnu_config_gnu['first_page'] = 'Y';
+	if (!$gnu_config_gnu['home_page']) $gnu_config_gnu['home_page'] = 'Y';
+	if (!$gnu_config_gnu['login_first_page']) $gnu_config_gnu['login_first_page'] = 'N';
+	if (!$gnu_config_gnu['push_method']) $gnu_config_gnu['push_method'] = 'Y';
+	if (!$gnu_config_gnu['lock']) $gnu_config_gnu['lock'] = 'N';
+	if (!$gnu_config_gnu['pushmsg']) $gnu_config_gnu['pushmsg'] = "N";
+	if (!$gnu_config_gnu['lock_second']) $gnu_config_gnu['lock_second'] = '';
+	if (!$gnu_config_gnu['youngcart_category_default']) $gnu_config_gnu['youngcart_category_default'] = "Y2";
+	if (!$gnu_config_gnu['lock_second']) $gnu_config_gnu['lock_second'] = '10';
+	if (!$gnu_config_gnu['must_login']) $gnu_config_gnu['must_login'] = 'N';
+
+	if (!$gnu_config_gnu['under_review']) $gnu_config_gnu['under_review'] = 'N';
+	if (!$gnu_config_gnu['bypass_url']) $gnu_config_gnu['bypass_url'] = '';
+
+	if (!$gnu_config_gnu['under_reviewi']) $gnu_config_gnu['under_reviewi'] = 'N';
+	if (!$gnu_config_gnu['bypass_urli']) $gnu_config_gnu['bypass_urli'] = '';
+
+	if (!$gnu_config_gnu['use_youngcart']) $gnu_config_gnu['use_youngcart'] = 'N';
+	if (!$gnu_config_gnu['youngcart_category']) $gnu_config_gnu['youngcart_category'] = 'N';
+	if (!$gnu_config_gnu['youngcart_category_boolean']) $gnu_config_gnu['youngcart_category_boolean'] = 'N';
+	if (!$gnu_config_gnu['youngcart_name']) $gnu_config_gnu['youngcart_name'] = '쇼핑몰';
+	if (!$gnu_config_gnu['category_default']) $gnu_config_gnu['category_default'] = 'Y1';
+	if (!$gnu_config_gnu['push_div_num']) $gnu_config_gnu['push_div_num'] = '3000';
+	if (!$gnu_config_gnu['login_method']) $gnu_config_gnu['login_method'] = 'id';
+	if (!$gnu_config_gnu['is_loading_file']) $gnu_config_gnu['is_loading_file'] = 'N';
+	if (!$gnu_config_gnu['progressbar']) $gnu_config_gnu['progressbar'] = 'Y';
+	if (!$gnu_config_gnu['push_m']) $gnu_config_gnu['push_m'] = 'Y';
+	if (!$gnu_config_gnu['loading_s']) $gnu_config_gnu['loading_s'] = '0';
+	if (!$gnu_config_gnu['list_show']) $gnu_config_gnu['list_show'] = '30';
+	if (!$gnu_config_gnu['push_duplication']) $gnu_config_gnu['push_duplication'] = 'Y';
+	if (!$gnu_config_gnu['build_sort']) $gnu_config_gnu['build_sort'] = 'G';
+	if (!$gnu_config_gnu['choose_board_keyword']) $gnu_config_gnu['choose_board_keyword'] = 'N';
+	if (!$gnu_config_gnu['youngcart_keyword']) $gnu_config_gnu['youngcart_keyword'] = 'N';
+	if (!$gnu_config_gnu['quick_bottom_margin']) $gnu_config_gnu['quick_bottom_margin'] = '0';
+	if (!$gnu_config_gnu['back_finish']) $gnu_config_gnu['back_finish'] = 'A';
+	if (!$gnu_config_gnu['use_kakao_link']) $gnu_config_gnu['use_kakao_link'] = 'N';
+	if (!$gnu_config_gnu['default_push']) $gnu_config_gnu['default_push'] = 'Y';
+	if (!$gnu_config_gnu['wake_lock']) $gnu_config_gnu['wake_lock'] = 'Y';
+	if (!$gnu_config_gnu['headsup_push_style']) $gnu_config_gnu['headsup_push_style'] = 'Y';
+	if (!$gnu_config_gnu['popup_push_style']) $gnu_config_gnu['popup_push_style'] = 'N';
+	if (!$gnu_config_gnu['interstitial_admob']) $gnu_config_gnu['interstitial_admob'] = 'Y';
+	if (!$gnu_config_gnu['banner_admob']) $gnu_config_gnu['banner_admob'] = 'Y';
+	if (!$gnu_config_gnu['webview_version']) $gnu_config_gnu['webview_version'] = '1(1.0)';
+	if (!$gnu_config_gnu['webview_versioni']) $gnu_config_gnu['webview_versioni'] = '1(1.0)';
+	if (!$gnu_config_gnu['notevi']) $gnu_config_gnu['notevi'] = 'N';
+	if (!$gnu_config_gnu['banner_admob']) $gnu_config_gnu['banner_admob'] = 'Y';
+	if (!$gnu_config_gnu['appcache']) $gnu_config_gnu['appcache'] = get_random_string_gnu('10');
+	if (!$gnu_config_gnu['setting_dp']) $gnu_config_gnu['setting_dp'] = 'default';
+	if (!$gnu_config_gnu['curl_way']) $gnu_config_gnu['curl_way'] = 'normal';
+	if (!$gnu_config_gnu['subscribe_comments']) $gnu_config_gnu['subscribe_comments'] = 'N';
+
+	if ($gnu_config_gnu['reward_limit'] == "") $gnu_config_gnu['reward_limit'] = '3';
+	if (!$gnu_config_gnu['reward_amount']) $gnu_config_gnu['reward_amount'] = '30';
+	if (!$gnu_config_gnu['reward_type']) $gnu_config_gnu['reward_type'] = 'point';
+	if (!$gnu_config_gnu['rewardad']) $gnu_config_gnu['rewardad'] = 'N';
+	if (!$gnu_config_gnu['iap_key']) $gnu_config_gnu['iap_key'] = '';
+	if (!$gnu_config_gnu['reward_admin']) $gnu_config_gnu['reward_admin'] = 'N';
+	if (!$gnu_config_gnu['reward_admin']) $gnu_config_gnu['reward_admin'] = 'N';
+	if (!$gnu_config_gnu['use_report_gnu']) $gnu_config_gnu['use_report_gnu'] = 'N';
+	if (!$gnu_config_gnu['onlyapp_url']) $gnu_config_gnu['onlyapp_url'] = '';
+
+	if (!$gnu_config_gnu['use_onlyapp_url']) $gnu_config_gnu['use_onlyapp_url'] = 'N';
+
+
+	if (!$gnu_config_gnu['native_admob']) $gnu_config_gnu['native_admob'] = 'N';
+
+	if (!$gnu_config_gnu['chatting_nonmembers']) $gnu_config_gnu['chatting_nonmembers'] = 'N';
+
+	$gnu_config_gnu["home_page"] = "Y";
+
+	if (!$gnu_config_gnu['login_session']) $gnu_config_gnu['login_session'] = 'N';
+
+	if (!$gnu_config_gnu['use_bottom']) $gnu_config_gnu['use_bottom'] = 'Y';
+	if ($gnu_config_gnu['notbottom_url'] == "%#$all%#$") {
+		$gnu_config_gnu['use_bottom'] = 'N';
+		$gnu_config_gnu['notbottom_url'] = "";
+	}
+
+	if ($gnu_config_gnu['linki']) {
+		$length = strlen("itms://");
+		if (substr($gnu_config_gnu['linki'], 0, $length) === "itms://") {
+			$link1 = explode("id", $gnu_config_gnu['linki']);
+			$link2 = explode("?", $link1[1]);
+			$gnu_config_gnu['linki'] = $link2[0];
+		}
+	}
+
+	return $gnu_config_gnu;
+}
+
+function get_notsend_push_query()
+{
+	$query = "select count(*) as 'cnt' from g5_gnupushapp_push where gp_issend = 'N'";
+	$row = sql_fetch($query);
+	if ($row['cnt'] > 0) {
+		$query = "select gp_pushid from g5_gnupushapp_push where gp_issend = 'N'";
+		$devices_select = sql_query($query);
+		return $devices_select;
+	} else {
+		return "none";
+	}
+}
+
+function setdefaultsetting_after($reg_id)
+{
+	$gnu_config = get_gnupushapp_config();
+	$setting_reply = 'N';
+	$setting_mypost_com = 'N';
+	$setting_mycom_com = 'N';
+	$setting_mycom_tail = 'N';
+	$setting_notice = 'N';
+	$setting_message = 'N';
+	$setting_mention = 'N';
+	$setting_recommendation = 'N';
+
+	if (is_array($gnu_config['setting_a']) && in_array("c", $gnu_config['setting_a'])) {
+		$setting_reply = 'Y';
+	}
+
+	if (is_array($gnu_config['setting_a']) && in_array("d", $gnu_config['setting_a'])) {
+		$setting_mypost_com = 'Y';
+	}
+
+	if (is_array($gnu_config['setting_a']) && in_array("e", $gnu_config['setting_a'])) {
+		$setting_mycom_com = 'Y';
+	}
+
+	if (is_array($gnu_config['setting_a']) && in_array("f", $gnu_config['setting_a'])) {
+		$setting_mycom_tail = 'Y';
+	}
+
+	if (is_array($gnu_config['setting_a']) && in_array("g", $gnu_config['setting_a'])) {
+		$setting_notice = 'Y';
+	}
+
+	if (is_array($gnu_config['setting_a']) && in_array("h", $gnu_config['setting_a'])) {
+		$setting_message = 'Y';
+	}
+
+	if (is_array($gnu_config['setting_a']) && in_array("i", $gnu_config['setting_a'])) {
+		$setting_mention = 'Y';
+	}
+
+	if (is_array($gnu_config['setting_a']) && in_array("j", $gnu_config['setting_a'])) {
+		$setting_recommendation = 'Y';
+	}
+
+	$sql = " update g5_gnupushapp_gcmregid
+			set gpr_setting_myreply = '{$setting_reply}',
+			gpr_setting_mypost_com = '{$setting_mypost_com}',
+			gpr_setting_mycom_com = '{$setting_mycom_com}',
+			gpr_setting_mycom_tail = '{$setting_mycom_tail}',
+			gpr_setting_notice = '{$setting_notice}',
+			gpr_setting_message = '{$setting_message}',
+			gpr_setting_mention = '{$setting_mention}',
+			gpr_setting_recommendation = '{$setting_recommendation}'
+
+			where gpr_reg_id = '{$reg_id}' ";
+	sql_query($sql);
+}
+
+function getdefaultsetting_after($reg_id)
+{
+	$gnu_config = get_gnupushapp_config();
+	$row_reg_id = get_device_info_by_regid($reg_id);
+	$setting_newpost = $row_reg_id['gpr_setting_newpost'];
+	$setting_newcom = $row_reg_id['gpr_setting_newcom'];
+	$setting_reply = $row_reg_id['gpr_setting_myreply'];
+	$setting_mypost_com = $row_reg_id['gpr_setting_mypost_com'];
+	$setting_mycom_com = $row_reg_id['gpr_setting_mycom_com'];
+	$setting_mycom_tail = $row_reg_id['gpr_setting_mycom_tail'];
+	$setting_notice = $row_reg_id['gpr_setting_notice'];
+	$setting_message = $row_reg_id['gpr_setting_message'];
+	$setting_mention = $row_reg_id['gpr_setting_mention'];
+	$setting_recommendation = $row_reg_id['gpr_setting_recommendation'];
+	$setting_marketing = $row_reg_id['gpr_setting_marketing'];
+
+	if (is_array($gnu_config['setting_a']) && in_array("c", $gnu_config['setting_a'])) {
+		$setting_reply = 'Y';
+	}
+
+	if (is_array($gnu_config['setting_a']) && in_array("d", $gnu_config['setting_a'])) {
+		$setting_mypost_com = 'Y';
+	}
+
+	if (is_array($gnu_config['setting_a']) && in_array("e", $gnu_config['setting_a'])) {
+		$setting_mycom_com = 'Y';
+	}
+
+	if (is_array($gnu_config['setting_a']) && in_array("f", $gnu_config['setting_a'])) {
+		$setting_mycom_tail = 'Y';
+	}
+
+	if (is_array($gnu_config['setting_a']) && in_array("g", $gnu_config['setting_a'])) {
+		$setting_notice = 'Y';
+	}
+
+	if (is_array($gnu_config['setting_a']) && in_array("h", $gnu_config['setting_a'])) {
+		$setting_message = 'Y';
+	}
+
+	if (is_array($gnu_config['setting_a']) && in_array("i", $gnu_config['setting_a'])) {
+		$setting_mention = 'Y';
+	}
+
+	if (is_array($gnu_config['setting_a']) && in_array("j", $gnu_config['setting_a'])) {
+		$setting_recommendation = 'Y';
+	}
+
+	$setting = $setting_newpost . "-" . $setting_newcom . "-" . $setting_reply . "-" . $setting_mypost_com . "-" . $setting_mycom_com . "-" . $setting_mycom_tail . "-" . $setting_notice . "-" . $setting_message . "-" . $setting_mention . "-" . $setting_recommendation . "-" . $setting_marketing;
+
+	return $setting;
+}
+
+function delete_chat_by_term()
+{
+
+	$gnu_config = get_gnupushapp_config();
+
+	$term_date = $gnu_config['chatting_delete_term'];
+
+	// 일정기간 지난 채팅내용 삭제작업
+	$delete_cnt = sql_fetch(" select count(*) as 'cnt' from g5_gnupushapp_chat where gpc_regdate < date_add(date_format( now() , '%Y-%m-%d %k:%i:%s'), interval -{$term_date} DAY) ");
+	if ($delete_cnt['cnt'] > 0) {
+		$row_result = sql_query(" select * from g5_gnupushapp_chat where gpc_regdate < date_add(date_format( now() , '%Y-%m-%d %k:%i:%s'), interval -{$term_date} DAY) ");
+
+		for ($i = 0; $row = sql_fetch_array($row_result); $i++) {
+			$data_array = unserialize(base64_decode($row_tmp['gpc_chat']));
+			foreach ($data_array as $key => $val) {
+				if ($val['is_file'] != "N") {
+					$file_dir_d = G5_DATA_PATH . '/gnupushchat/' . $row_tmp['gpc_ix'];
+					$mb_image_path_d = $file_dir_d . '/' . $val['file_name'];
+					if (file_exists($mb_image_path_d)) {
+						@unlink($mb_image_path_d);
+					}
+					if ($val['is_image'] == "Y") {
+						$fileDate_d = date("YmdHms", strtotime($val['reg_date']));
+
+						$filename_d = $fileDate_d . $val['content'];
+						$target_path_d = G5_DATA_PATH . '/gnupushchat/thumbnail/' . $filename_d;
+						if (file_exists($target_path_d)) {
+							@unlink($target_path_d);
+						}
+					}
+				}
+			}
+		}
+
+		sql_query("DELETE from g5_gnupushapp_chat where gpc_regdate < date_add(date_format( now() , '%Y-%m-%d %k:%i:%s'), interval -{$term_date} DAY) ", true);
+	}
+}
+
+function maintain_ratio_thumbnail($filename, $source_path, $target_path, $thumb_width, $thumb_height, $is_create, $is_crop = false, $crop_mode = 'center', $is_sharpen = false, $um_value = '80/0.5/3')
+{
+	global $g5;
+
+	if (!$thumb_width && !$thumb_height)
+		return;
+
+	$source_file = "$source_path/$filename";
+
+	if (!is_file($source_file)) // 원본 파일이 없다면
+		return;
+
+	$size = @getimagesize($source_file);
+	if ($size[2] < 1 || $size[2] > 3) // gif, jpg, png 에 대해서만 적용
+		return;
+
+	if (!is_dir($target_path)) {
+		@mkdir($target_path, G5_DIR_PERMISSION);
+		@chmod($target_path, G5_DIR_PERMISSION);
+	}
+
+	// 디렉토리가 존재하지 않거나 쓰기 권한이 없으면 썸네일 생성하지 않음
+	if (!(is_dir($target_path) && is_writable($target_path)))
+		return '';
+
+	// Animated GIF는 썸네일 생성하지 않음
+	if ($size[2] == 1) {
+		if (is_animated_gif($source_file))
+			return basename($source_file);
+	}
+
+	$ext = array(1 => 'gif', 2 => 'jpg', 3 => 'png');
+
+	$thumb_filename = preg_replace("/\.[^\.]+$/i", "", $filename); // 확장자제거
+	$thumb_file = "$target_path/thumb-{$thumb_filename}_{$thumb_width}x{$thumb_height}." . $ext[$size[2]];
+
+	$thumb_time = @filemtime($thumb_file);
+	$source_time = @filemtime($source_file);
+
+	if (file_exists($thumb_file)) {
+		if ($is_create == false && $source_time < $thumb_time) {
+			return basename($thumb_file);
+		}
+	}
+
+	// 원본파일의 GD 이미지 생성
+	$src = null;
+	$degree = 0;
+
+	if ($size[2] == 1) {
+		$src = imagecreatefromgif($source_file);
+		$src_transparency = imagecolortransparent($src);
+	} else if ($size[2] == 2) {
+		$src = imagecreatefromjpeg($source_file);
+
+		if (function_exists('exif_read_data')) {
+			// exif 정보를 기준으로 회전각도 구함
+			$exif = @exif_read_data($source_file);
+			if (!empty($exif['Orientation'])) {
+				switch ($exif['Orientation']) {
+					case 8:
+						$degree = 90;
+						break;
+					case 3:
+						$degree = 180;
+						break;
+					case 6:
+						$degree = -90;
+						break;
+				}
+
+				// 회전각도 있으면 이미지 회전
+				if ($degree) {
+					$src = imagerotate($src, $degree, 0);
+
+					// 세로사진의 경우 가로, 세로 값 바꿈
+					if ($degree == 90 || $degree == -90) {
+						$tmp = $size;
+						$size[0] = $tmp[1];
+						$size[1] = $tmp[0];
+					}
+				}
+			}
+		}
+	} else if ($size[2] == 3) {
+		$src = imagecreatefrompng($source_file);
+		imagealphablending($src, true);
+	} else {
+		return;
+	}
+
+	if (!$src)
+		return;
+
+	$is_large = true;
+	// width, height 설정
+	if ($thumb_width) {
+		if (!$thumb_height) {
+			$thumb_height = round(($thumb_width * $size[1]) / $size[0]);
+		} else {
+			if ($size[0] < $thumb_width || $size[1] < $thumb_height)
+				$is_large = false;
+		}
+	} else {
+		if ($thumb_height) {
+			$thumb_width = round(($thumb_height * $size[0]) / $size[1]);
+		}
+	}
+
+	$dst_x = 0;
+	$dst_y = 0;
+	$src_x = 0;
+	$src_y = 0;
+	$dst_w = $thumb_width;
+	$dst_h = $thumb_height;
+	$src_w = $size[0];
+	$src_h = $size[1];
+
+	$ratio = $dst_h / $dst_w;
+
+	if ($is_large) {
+		// 크롭처리
+		if ($is_crop) {
+			switch ($crop_mode) {
+				case 'center':
+					if ($size[1] / $size[0] >= $ratio) {
+						$src_h = round($src_w * $ratio);
+						$src_y = round(($size[1] - $src_h) / 2);
+					} else {
+						$src_w = round($size[1] / $ratio);
+						$src_x = round(($size[0] - $src_w) / 2);
+					}
+					break;
+				default:
+					if ($size[1] / $size[0] >= $ratio) {
+						$src_h = round($src_w * $ratio);
+					} else {
+						$src_w = round($size[1] / $ratio);
+					}
+					break;
+			}
+
+			$dst = imagecreatetruecolor($dst_w, $dst_h);
+
+			if ($size[2] == 3) {
+				imagealphablending($dst, false);
+				imagesavealpha($dst, true);
+			} else if ($size[2] == 1) {
+				$palletsize = imagecolorstotal($src);
+				if ($src_transparency >= 0 && $src_transparency < $palletsize) {
+					$transparent_color   = imagecolorsforindex($src, $src_transparency);
+					$current_transparent = imagecolorallocate($dst, $transparent_color['red'], $transparent_color['green'], $transparent_color['blue']);
+					imagefill($dst, 0, 0, $current_transparent);
+					imagecolortransparent($dst, $current_transparent);
+				}
+			}
+		} else { // 비율에 맞게 생성
+			$dst = imagecreatetruecolor($dst_w, $dst_h);
+			$bgcolor = imagecolorallocate($dst, 255, 255, 255); // 배경색
+
+			if ($src_w > $src_h) {
+				$tmp_h = round(($dst_w * $src_h) / $src_w);
+				$dst_y = round(($dst_h - $tmp_h) / 2);
+				$dst_h = $tmp_h;
+			} else {
+				$tmp_w = round(($dst_h * $src_w) / $src_h);
+				$dst_x = round(($dst_w - $tmp_w) / 2);
+				$dst_w = $tmp_w;
+			}
+
+			if ($size[2] == 3) {
+				$bgcolor = imagecolorallocatealpha($dst, 0, 0, 0, 127);
+				imagefill($dst, 0, 0, $bgcolor);
+				imagealphablending($dst, false);
+				imagesavealpha($dst, true);
+			} else if ($size[2] == 1) {
+				$palletsize = imagecolorstotal($src);
+				if ($src_transparency >= 0 && $src_transparency < $palletsize) {
+					$transparent_color   = imagecolorsforindex($src, $src_transparency);
+					$current_transparent = imagecolorallocate($dst, $transparent_color['red'], $transparent_color['green'], $transparent_color['blue']);
+					imagefill($dst, 0, 0, $current_transparent);
+					imagecolortransparent($dst, $current_transparent);
+				} else {
+					imagefill($dst, 0, 0, $bgcolor);
+				}
+			} else {
+				imagefill($dst, 0, 0, $bgcolor);
+			}
+		}
+	} else {
+		$dst = imagecreatetruecolor($dst_w, $dst_h);
+		$bgcolor = imagecolorallocate($dst, 255, 255, 255); // 배경색
+
+		if ($src_w < $dst_w) {
+			if ($src_h >= $dst_h) {
+				$dst_x = round(($dst_w - $src_w) / 2);
+				$src_h = $dst_h;
+			} else {
+				$dst_x = round(($dst_w - $src_w) / 2);
+				$dst_y = round(($dst_h - $src_h) / 2);
+				$dst_w = $src_w;
+				$dst_h = $src_h;
+			}
+		} else {
+			if ($src_h < $dst_h) {
+				$dst_y = round(($dst_h - $src_h) / 2);
+				$dst_h = $src_h;
+				$src_w = $dst_w;
+			}
+		}
+
+		if ($size[2] == 3) {
+			$bgcolor = imagecolorallocatealpha($dst, 0, 0, 0, 127);
+			imagefill($dst, 0, 0, $bgcolor);
+			imagealphablending($dst, false);
+			imagesavealpha($dst, true);
+		} else if ($size[2] == 1) {
+			$palletsize = imagecolorstotal($src);
+			if ($src_transparency >= 0 && $src_transparency < $palletsize) {
+				$transparent_color   = imagecolorsforindex($src, $src_transparency);
+				$current_transparent = imagecolorallocate($dst, $transparent_color['red'], $transparent_color['green'], $transparent_color['blue']);
+				imagefill($dst, 0, 0, $current_transparent);
+				imagecolortransparent($dst, $current_transparent);
+			} else {
+				imagefill($dst, 0, 0, $bgcolor);
+			}
+		} else {
+			imagefill($dst, 0, 0, $bgcolor);
+		}
+	}
+
+	imagecopyresampled($dst, $src, $dst_x, $dst_y, $src_x, $src_y, $dst_w, $dst_h, $src_w, $src_h);
+
+	// sharpen 적용
+	if ($is_sharpen && $is_large) {
+		$val = explode('/', $um_value);
+		UnsharpMask($dst, $val[0], $val[1], $val[2]);
+	}
+
+	if ($size[2] == 1) {
+		imagegif($dst, $thumb_file);
+	} else if ($size[2] == 3) {
+		if (!defined('G5_THUMB_PNG_COMPRESS'))
+			$png_compress = 5;
+		else
+			$png_compress = G5_THUMB_PNG_COMPRESS;
+
+		imagepng($dst, $thumb_file, $png_compress);
+	} else {
+		if (!defined('G5_THUMB_JPG_QUALITY'))
+			$jpg_quality = 90;
+		else
+			$jpg_quality = G5_THUMB_JPG_QUALITY;
+
+		imagejpeg($dst, $thumb_file, $jpg_quality);
+	}
+
+	chmod($thumb_file, G5_FILE_PERMISSION); // 추후 삭제를 위하여 파일모드 변경
+
+	imagedestroy($src);
+	imagedestroy($dst);
+
+	return basename($thumb_file);
+}
+
+
+
+
+function stripslashes_deep($value)
+{
+	$value = is_array($value) ? array_map('stripslashes_deep', $value) : stripslashes($value);
+	return $value;
+}
+
+function get_random_string_gnu($len)
+{
+
+	$lowercase = 'abcdefghijklmnopqrstuvwxyz';
+	$uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+	$numeric = '0123456789';
+	$key = '';
+	$token = '';
+	$key = $lowercase . $uppercase . $numeric;
+
+	for ($i = 0; $i < $len; $i++) {
+		$token .= $key[mt_rand(0, strlen($key) - 1)];
+	}
+	return $token;
+}
+
+function get_random_num_gnu($len)
+{
+	$numeric = '0123456789';
+	$key = '';
+	$token = '';
+	$key = $numeric . $numeric . $numeric;
+
+	for ($i = 0; $i < $len; $i++) {
+		$token .= $key[mt_rand(0, strlen($key) - 1)];
+	}
+	return intval($token);
+}
+
+
+function get_my_chat_id()
+{
+
+	$gnu_config = get_gnupushapp_config();
+
+	$my_id = "none";
+
+	if ($_SESSION['ss_mb_id']) {
+		$my_id = $_SESSION['ss_mb_id'];
+	} else {
+
+		if ($_SESSION['reg_id'] && $gnu_config['chatting_admin'] == "D") {
+
+			$my_id = substr($_SESSION['reg_id'], 30, 18);
+		}
+	}
+	return $my_id;
+}
+
+function sync_proc_push($data_array, $gp_target_browser, $gp_type, $gp_target_url, $gp_target_title)
+{
+	$rnum = get_random_string_gnu('5');
+	$keypass = substr(md5(date('YmdHis')), 0, 25) . $rnum;
+
+	$data_post = base64_encode(serialize($data_array));
+
+	sql_query(" INSERT INTO g5_gnupushapp_push 
+					set gp_pushid = '{$keypass}',
+					gp_issend = 'N',
+					gp_target_browser = '{$gp_target_browser}',
+					gp_text = '{$data_post}',
+					gp_push_date = '" . G5_TIME_YMDHIS . "',
+					gp_type = '{$gp_type}',
+					gp_target_url = '{$gp_target_url}',
+					gp_target_title = '{$gp_target_title}'
+					", true);
+
+	include_once(G5_PLUGIN_PATH . '/gnupushapp/procPush_sync.php');
+}
+
+function gnu_send_socket($data_array, $gp_target_browser, $gp_type, $gp_target_url, $gp_target_title)
+{
+	$gnu_config = get_gnupushapp_config();
+
+	$rnum = get_random_string_gnu('5');
+	$keypass = substr(md5(date('YmdHis')), 0, 25) . $rnum;
+
+	$data_post = base64_encode(serialize($data_array));
+
+	sql_query(" INSERT INTO g5_gnupushapp_push 
+					set gp_pushid = '{$keypass}',
+					gp_issend = 'N',
+					gp_target_browser = '{$gp_target_browser}',
+					gp_text = '{$data_post}',
+					gp_push_date = '" . G5_TIME_YMDHIS . "',
+					gp_type = '{$gp_type}',
+					gp_target_url = '{$gp_target_url}',
+					gp_target_title = '{$gp_target_title}'
+					", true);
+
+	if ($gnu_config['push_m'] == 'Y') {
+		$domain = G5_PLUGIN_URL . "/gnupushapp/procPush.php";
+		$url_push = $domain . "?data=" . $keypass;
+		go_push_socket($url_push);
+	}
+}
+
+function getnewcurl()
+{
+	$gnu_config = get_gnupushapp_config();
+	$api_key = $gnu_config['api_key'];
+
+	$url_gcm = 'https://fcm.googleapis.com/fcm/send';
+	$headers_gcm = array('Authorization: key=' . $api_key, 'Content-Type: application/json');
+
+	$ch_gcm = curl_init();
+	curl_setopt($ch_gcm, CURLOPT_URL, $url_gcm);
+	curl_setopt($ch_gcm, CURLOPT_SSL_VERIFYPEER, FALSE);
+	curl_setopt($ch_gcm, CURLOPT_POST, true);
+	curl_setopt($ch_gcm, CURLOPT_HTTPHEADER, $headers_gcm);
+	curl_setopt($ch_gcm, CURLOPT_RETURNTRANSFER, true);
+
+	return $ch_gcm;
+}
+
+function getfields_gcm($typeP, $val, $title, $content, $address, $etc, $badgeN, $sound, $keypass)
+{
+	if ($typeP == "chat") {
+		$payload = array('badge' => 0);
+		$fields_gcm = array('registration_ids' => $val, "notification" => $payload, 'data' => array('pushtype' => $typeP, 'link_url' => $address, 'etc' => $etc, "keypass" => $keypass),);
+	} elseif ($typeP == "read") {
+		$payload = array('badge' => 0);
+		$fields_gcm = array('registration_ids' => $val, "notification" => $payload, 'data' => array('pushtype' => $typeP, 'link_url' => $address, 'etc' => $etc, "keypass" => $keypass),);
+	} else {
+		if ($sound == 'sound') {
+			$payload = array('body' => $content, 'sound' => 'default', 'badge' => $badgeN, 'title' => $title);
+		} else {
+			$payload = array('body' => $content, 'badge' => $badgeN, 'title' => $title);
+		}
+		$fields_gcm = array('registration_ids' => $val, "notification" => $payload, "data" => array('pushtype' => $typeP, 'link_url' => $address, 'etc' => $etc, "keypass" => $keypass));
+	}
+	return $fields_gcm;
+}
+
+function getfields_gcm2($typeP, $token, $title, $content, $address, $etc, $badgeN, $sound, $keypass)
+{
+	$message = array();
+	if ($typeP == "chat") {
+
+		$message = array(
+			'message' => array(
+				'token' => $token,
+				"android" => array(
+					"priority" => "high",
+				),
+				"apns" => array(
+					"headers" => array(
+						"apns-priority" => "10",
+					),
+					"payload" => array(
+						"aps" => array(
+							"badge" => 0,
+						),
+					),
+				),
+				"data" => array(
+					"type" => $typeP, 'pushtype' => $typeP, 'link_url' => $address, 'etc' => $etc, "keypass" => $keypass
+				)
+			)
+		);
+	} elseif ($typeP == "read") {
+
+		$message = array(
+			'message' => array(
+				'token' => $token,
+				"android" => array(
+					"priority" => "high",
+				),
+				"apns" => array(
+					"headers" => array(
+						"apns-priority" => "10",
+					),
+					"payload" => array(
+						"aps" => array(
+							"badge" => 0,
+						),
+					),
+				),
+				"data" => array(
+					"type" => $typeP, 'pushtype' => $typeP, 'link_url' => $address, 'etc' => $etc, "keypass" => $keypass
+				)
+			)
+		);
+	} else {
+		$message = array(
+			'message' => array(
+				'token' => $token,
+				"android" => array(
+					"priority" => "high",
+				),
+				"apns" => array(
+					"headers" => array(
+						"apns-priority" => "10",
+					),
+					"payload" => array(
+						"aps" => array(
+							"alert" => array(
+								"title" => $title,
+								"body" => $content
+							),
+							"badge" => $badgeN,
+							"sound" => "default",
+						),
+					),
+				),
+				"data" => array(
+					"type" => $typeP, 'pushtype' => $typeP, 'link_url' => $address, 'etc' => $etc, "keypass" => $keypass
+				)
+			)
+		);
+
+		if ($sound != 'sound') {
+			unset($message['message']['apns']['payload']['aps']['sound']);
+		}
+	}
+	return $message;
+}
+
+function get_mb_id_listq($include_mb_id, $m_list)
+{
+	$array_m_list = explode(",", $m_list);
+	if (count($array_m_list) > 0) {
+
+		for ($i = 0; $i < count($array_m_list); $i++) {
+			if ($include_mb_id == "") {
+				$include_mb_id = "'" . $array_m_list[$i] . "'";
+			} else {
+				$include_mb_id .= ",'" . $array_m_list[$i] . "'";
+			}
+		}
+	}
+	return $include_mb_id;
+}
+
+function get_mb_id_list_for_query($mb_id_list_for_query, $mb_id_list_i)
+{
+	global $g5;
+	$mb_list = explode(",", $mb_id_list_i);
+
+	if (count($mb_list) > 0) {
+
+		for ($i = 0; $i < count($mb_list); $i++) {
+			if ($mb_id_list_for_query == "") {
+				$mb_id_list_for_query = "'" . $mb_list[$i] . "'";
+			} else {
+				$mb_id_list_for_query .= ",'" . $mb_list[$i] . "'";
+			}
+		}
+	}
+
+	return $mb_id_list_for_query;
+}
+
+
+function change_sync_chatting($check_my_id, $my_id)
+{
+	// $row_result_count = sql_fetch(" select count(*) as cnt from g5_gnupushapp_newchatting_room_joinlist where reg_id = '{$_SESSION['reg_id']}' and mb_id = '$check_my_id' and is_member = 'N' ");
+	// if($row_result_count['cnt'] > 0){
+	// 	sql_query("update g5_gnupushapp_newchatting_room_joinlist set mb_id = '$my_id', is_member = 'Y' where reg_id = '{$_SESSION['reg_id']}' and mb_id = '$check_my_id' and is_member = 'N' ");
+	// 	sql_query("update g5_gnupushapp_newchatting_content set mb_id = '$my_id', is_member = 'Y' where reg_id = '{$_SESSION['reg_id']}' and mb_id = '$check_my_id' and is_member = 'N' ");
+
+	// 	sql_query("update g5_gnupushapp_newchatting_content_readlist set mb_id = '$my_id', is_member = 'Y' where reg_id = '{$_SESSION['reg_id']}' and mb_id = '$check_my_id' and is_member = 'N' ");
+
+	// 	$room_result = sql_query(" select * from g5_gnupushapp_newchatting_room where join_list like '$check_my_id,%' or join_list like '%,$check_my_id,%' or join_list like '%,$check_my_id' ");
+	// 	for ($i=0; $row_tmp=sql_fetch_array($room_result); $i++)
+	// 	{
+	// 		$join_list = explode(",",$row_tmp['join_list']);
+	// 		$key = array_search($check_my_id, $join_list);
+	// 		$join_list[$key] = $my_id;
+	// 		$new_join_list = implode(",",$join_list);
+
+	// 		sql_query("update g5_gnupushapp_newchatting_room set join_list = '$new_join_list', up_date = '".G5_TIME_YMDHIS."' where cr_ix = '{$row_tmp['cr_ix']}' ");
+	// 	}
+	// }
+}
+
+function get_chat_list($my_id, $array_data, $array_my_room_list, $array_my_room_notread_count)
+{
+
+	$sql_cr_ix = implode("','", $array_my_room_list);
+
+	$insert_data_room_list = array();
+
+	$row_result = sql_query("select * from g5_gnupushapp_newchatting_content where cr_ix in ('$sql_cr_ix') and c_status = 'ok' order by regdate desc");
+	for ($i = 0; $row_tmp = sql_fetch_array($row_result); $i++) {
+		if (is_array($insert_data_room_list) && in_array($row_tmp['cr_ix'], $insert_data_room_list)) continue;
+
+		array_push($insert_data_room_list, $row_tmp['cr_ix']);
+
+		//방 정보로 상대방 아이디 가져오기.
+		$join_result = sql_fetch("select join_list from g5_gnupushapp_newchatting_room where cr_ix = '{$row_tmp['cr_ix']}' ");
+		$array_join_list = explode(",", $join_result['join_list']);
+		foreach ($array_join_list as $val) {
+			if ($val != $my_id) $target_mb_id = $val;
+		}
+
+		$target_mem_info = get_member($target_mb_id);
+
+		if (!$target_mem_info['mb_id']) {
+			$target_nick_name = "user" . substr($target_mb_id, 8, 6);
+		} else {
+			$target_nick_name = $target_mem_info['mb_nick'];
+		}
+
+		$use_profile = "false";
+		$profile_link = "none";
+
+		$mb_icon_url = get_gnu_profile_image($target_mb_id);
+
+		if ($mb_icon_url) {
+			$use_profile = "true";
+			$profile_link = $mb_icon_url;
+		}
+
+		$content = cut_str($row_tmp['content'], 50, '');
+		$content = str_replace(array('&lt;', '&gt;', '&quot;', '&nbsp;', '&amp;'), array('<', '>', '"', ' ', '&'), $content);
+		if ($device_in['gpr_sort'] == "A") {
+			$content = str_replace('#8@plus#8@', '+', $content);
+		}
+		if ($device_in['gpr_sort'] == "I") {
+			$content = str_replace('+', '#8@plus#8@', $content);
+		}
+
+		$time_h = date("H", strtotime($row_tmp['regdate']));
+		$time_m = date("i", strtotime($row_tmp['regdate']));
+		if ($time_h > 12) {
+			$time_h = $time_h - 12;
+			$time = "오후 " . $time_h . ":" . $time_m;
+		} else {
+			$time = "오전 " . $time_h . ":" . $time_m;
+		}
+
+		$regdate = date("Y-m-d", strtotime($row_tmp['regdate']));
+
+		$array_data_this = array(
+			"mb_id" => $target_mb_id,
+			"room_id" => $row_tmp['cr_ix'],
+			"mb_nick" => $target_nick_name,
+			"date" => $regdate,
+			"time" => $time,
+			"content" => $content,
+			"read" => strval($array_my_room_notread_count[$row_tmp['cr_ix']]),
+			"use_profile" => $use_profile,
+			"profile_link" => $profile_link
+		);
+		$array_data[$row_tmp['cr_ix']] = $array_data_this;
+	}
+
+	return $array_data;
+}
+
+
+
+if ($is_member && preg_match("/GNUPUSH/", $_SERVER['HTTP_USER_AGENT']) && $badge = get_session('gnu_badge')) {
+	$gnu_config = get_gnupushapp_config();
+
+	if ($gnu_config["mypushlist"] == "Y") {
+		$count_badge = getBadge_by_mb_id($member['mb_id']);
+
+		if ($count_badge != $badge) {
+			$result_dd = get_device_by_member_id($member['mb_id']);
+
+			$reg_ids_A = array();
+			$reg_ids_I = array();
+
+			for ($i = 0; $rowddd = sql_fetch_array($result_dd); $i++) {
+				if ($rowddd['gpr_sort'] == "A" && $rowddd['gpr_os_version'] < 8) array_push($reg_ids_A, $rowddd['gpr_reg_id']);
+				if ($rowddd['gpr_sort'] == "I") array_push($reg_ids_I, $rowddd['gpr_reg_id']);
+			}
+
+			if (count($reg_ids_A) > 0) sendBadge("A", $reg_ids_A, $count_badge);
+			if (count($reg_ids_I) > 0) sendBadge("I", $reg_ids_I, $count_badge);
+			set_session('gnu_badge', $count_badge);
+		}
+	}
+}

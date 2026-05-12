@@ -1,0 +1,29 @@
+# OS / editor metadata
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# Local agent/runtime state
+.omx/
+
+# Runtime data, sessions, caches, editor uploads, DB credentials
+data/
+
+# User-uploaded or generated public files
+file/
+newsletter/
+
+# Local backups and packaged archives
+backup/
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.rar
+*.7z
+
+# Logs and temporary files
+*.log
+tmp/
+temp/

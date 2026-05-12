@@ -1,0 +1,17 @@
+.ltx .img{float:left;border:1px solid #e5e5e5;padding:2px;}
+.ltx .inner{float:left;padding-left:10px;color:#a1a3b2;}
+.ltx .inner .tit{width:215px;height:55px;display:block;padding:2px 0 3px;line-height:17px}
+.ltx .inner .desc{width:215px;margin:0px;}
+.ltx .inner .txt{text-align:right;padding-right:0px}
+
+
+/* 새글 스킨 (latest) */
+.ltx_pc {float:left;margin-left:20px}
+.ltx {position:relative;float:left;margin-bottom:20px;padding:13px;width:290px;height:150px;border:1px solid #e5e5e5}
+.ltx ul {margin::0px 0 0 10px;padding:0;list-style:none}
+.ltx li {padding:0px 0;line-height:20px}
+.ltx li a:link, a:visited {text-decoration:none}
+.ltx li a:hover{color:#0097dd;text-decoration:none}
+.ltx .lt_title {display:block;padding:10px 0 8px;border-bottom:1px solid #e5e5e5;}
+.ltx .lt_more {position:absolute;top:10px;right:0;padding:13px}
+.datatime {float: right;margin:0 ;color:#000000;}

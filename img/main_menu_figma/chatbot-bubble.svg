@@ -1,0 +1,9 @@
+<svg preserveAspectRatio="none" width="100%" height="100%" overflow="visible" style="display: block;" viewBox="0 0 185 123" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path id="Union" d="M161 0C174.255 1.80392e-06 185 10.7452 185 24V81C185 94.2548 174.255 105 161 105H59.2441C50.4046 110.53 31.8955 121.87 27 123C27 123 30.2707 111.147 30.6865 105H24C10.7452 105 7.24837e-08 94.2548 0 81V24C0 10.7452 10.7452 3.14076e-07 24 0H161Z" fill="url(#paint0_linear_0_7)"/>
+<defs>
+<linearGradient id="paint0_linear_0_7" x1="92.5" y1="0" x2="92.5" y2="123" gradientUnits="userSpaceOnUse">
+<stop stop-color="#68B3FA"/>
+<stop offset="1" stop-color="#448EFB"/>
+</linearGradient>
+</defs>
+</svg>
