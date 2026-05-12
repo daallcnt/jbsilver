@@ -51,9 +51,10 @@ switch ($gr_id) {
 
 
 <div id="left_menu" class="a4">
-	<li class="smenu1"><a href="javascript:menu4sub1();">60+구인정보</a></li>
+	<li class="smenu1"><a href="javascript:menu4sub0();">노인일자리소개</a></li>
 	<li class="smenu2"><a href="javascript:menu4sub2();">60+구직정보</a></li>
-	<li class="smenu3"><a href="javascript:menu4sub3();">구인구직 QnA</a></li>
+	<li class="smenu3"><a href="javascript:menu4sub1();">60+구인정보</a></li>
+	<li class="smenu4"><a href="javascript:menu4sub3();">구인구직 QnA</a></li>
 </div>
 
 <?
@@ -142,5 +143,4 @@ switch ($gr_id) {
         break;
 }  
 ?>
-
 

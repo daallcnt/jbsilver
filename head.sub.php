@@ -162,9 +162,10 @@ switch ($bo_table) {
 
 	case 'sub03_05' : echo "<body id='page5'>";  break;
 
-	case 'sub04_01' : echo "<body id='page1'>";  break;
+	case 'sub04_00' : echo "<body id='page1'>";  break;
+	case 'sub04_01' : echo "<body id='page3'>";  break;
 	case 'sub04_02' : echo "<body id='page2'>";  break;
-	case 'sub04_03' : echo "<body id='page3'>";  break;
+	case 'sub04_03' : echo "<body id='page4'>";  break;
 
 	case 'sub05_01' : echo "<body id='page1'>";  break;
 	case 'sub05_02' : echo "<body id='page2'>";  break;

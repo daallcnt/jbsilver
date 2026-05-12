@@ -59,10 +59,10 @@
 						</ul>
 					</li>
 					<li class="gnb_1dli">
-						<a href="javascript:menu4sub2();" class="gnb_1da">일자리안내</a>
+						<a href="javascript:menu4sub0();" class="gnb_1da">일자리안내</a>
 						<button type="button" class="btn_gnb_op">하위분류</button>
 						<ul class="gnb_2dul">
-							<li class="gnb_2dli"><a href="javascript:menuPreparing();" class="gnb_2da">노인일자리소개 (연결 준비중)</a></li>
+							<li class="gnb_2dli"><a href="javascript:menu4sub0();" class="gnb_2da">노인일자리소개</a></li>
 							<li class="gnb_2dli"><a href="javascript:menu4sub2();" class="gnb_2da">구직서비스</a></li>
 							<li class="gnb_2dli"><a href="javascript:menu4sub1();" class="gnb_2da">구인서비스</a></li>
 						</ul>

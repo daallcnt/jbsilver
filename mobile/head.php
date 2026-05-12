@@ -37,12 +37,15 @@ switch ($gr_id) {
 		}
 	break;	
 	case "sub04" :
-		$group['gr_subject'] = '구인정보'; 
+		$group['gr_subject'] = '일자리안내'; 
 		$SWF_pageNum	= '4';
+		switch ($co_id) {
+		  case 'sub04_00' :$SWF_Num = '1';	$board['bo_subject'] = '노인일자리소개';  break;
+		}
 	switch ($bo_table) {
-	  case 'sub04_01' :$SWF_Num = '1';	$board['bo_subject'] = '60+구인정보';  break;
+	  case 'sub04_01' :$SWF_Num = '3';	$board['bo_subject'] = '60+구인정보';  break;
 	  case 'sub04_02' :$SWF_Num = '2';	$board['bo_subject'] = '60+구직정보';  break;
-	  case 'sub04_03' :$SWF_Num = '3';	$board['bo_subject'] = '구인구직 QnA';  break;
+	  case 'sub04_03' :$SWF_Num = '4';	$board['bo_subject'] = '구인구직 QnA';  break;
 	}
 	break;
 	case "sub05" :
@@ -146,9 +149,10 @@ if(!$board['bo_subject']){
 	<p class="sub_menu_title"><?=$group['gr_subject']?></p>
 	<p class="sub_title_bar"></p>
 	<div id="left_menu">
-		<li class="smenu1"><a href="javascript:menu4sub1();">60+구인정보</a></li>
+		<li class="smenu1"><a href="javascript:menu4sub0();">노인일자리소개</a></li>
 		<li class="smenu2"><a href="javascript:menu4sub2();">60+구직정보</a></li>
-		<li class="smenu3"><a href="javascript:menu4sub3();">구인구직 QnA</a></li>
+		<li class="smenu3"><a href="javascript:menu4sub1();">60+구인정보</a></li>
+		<li class="smenu4"><a href="javascript:menu4sub3();">구인구직 QnA</a></li>
 	</div>
 <? }?>
 

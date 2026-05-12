@@ -59,12 +59,15 @@ switch ($gr_id) {
 		}
 	break;
 	case "sub04" :
-		$group['gr_subject'] = '취업정보'; 
+		$group['gr_subject'] = '일자리안내'; 
 		$SWF_pageNum	= '4';
+		switch ($co_id) {
+		  case 'sub04_00' :$SWF_Num = '1';	$board['bo_subject'] = '노인일자리소개';  break;
+		}
 	switch ($bo_table) {
-	  case 'sub04_01' :$SWF_Num = '1';	$board['bo_subject'] = '60+구인정보';  break;
+	  case 'sub04_01' :$SWF_Num = '3';	$board['bo_subject'] = '60+구인정보';  break;
 	  case 'sub04_02' :$SWF_Num = '2';	$board['bo_subject'] = '60+구직정보';  break;
-	  case 'sub04_03' :$SWF_Num = '3';	$board['bo_subject'] = '구인구직 QnA';  break;
+	  case 'sub04_03' :$SWF_Num = '4';	$board['bo_subject'] = '구인구직 QnA';  break;
 	}
 	break;
 	case "sub05" :
@@ -185,9 +188,9 @@ if(!$board['bo_subject']){
 	</div> 
 	<!--로케이션영역 끝-->
 
-	<? if (!isset($co_id) || !in_array($co_id, array('sub01_02', 'sub02_02', 'sub02_03'))) include_once(G5_PATH.'/inc/left.php');?>
+	<? if (!isset($co_id) || !in_array($co_id, array('sub01_02', 'sub02_02', 'sub02_03', 'sub04_00'))) include_once(G5_PATH.'/inc/left.php');?>
 
-	<div id="sub" class="<?php echo (isset($co_id) && in_array($co_id, array('sub01_02', 'sub02_02', 'sub02_03'))) ? 'sub_full_width' : ''; ?>"> <!-- (s)sub-->	  
+	<div id="sub" class="<?php echo (isset($co_id) && in_array($co_id, array('sub01_02', 'sub02_02', 'sub02_03', 'sub04_00'))) ? 'sub_full_width' : ''; ?>"> <!-- (s)sub-->	  
 		<p class="pt_underline"><span id="pt_title"><?=$board['bo_subject']?></span><span class="pt_title_side">행복한 노후! 새로운 청춘! 전북노인일자리센터가 희망과 활기를 불어넣어 드리겠습니다.</span></p>							
 			
 		<div id="contents">

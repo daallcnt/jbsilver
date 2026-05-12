@@ -73,7 +73,7 @@ $(function(){
 				<li class="menu1 <?php echo ($current_gr_id == 'sub01') ? 'is_active' : ''; ?>"><a href="javascript:menu1sub1();">센터안내</a></li>
 				<li class="menu2 <?php echo ($current_gr_id == 'sub02') ? 'is_active' : ''; ?>"><a href="javascript:menu2sub3();">사업안내</a></li>
 				<li class="menu8 <?php echo ($current_gr_id == 'sub10') ? 'is_active' : ''; ?>"><a href="javascript:menu10sub1();">교육안내</a></li>
-				<li class="menu4 <?php echo ($current_gr_id == 'sub04' && $current_bo_table != 'sub04_03') ? 'is_active' : ''; ?>"><a href="javascript:menu4sub2();">일자리안내</a></li>
+				<li class="menu4 <?php echo ($current_gr_id == 'sub04' && $current_bo_table != 'sub04_03') ? 'is_active' : ''; ?>"><a href="javascript:menu4sub0();">일자리안내</a></li>
 				<li class="menu5 <?php echo ($current_bo_table == 'sub04_03') ? 'is_active' : ''; ?>"><a href="javascript:menu4sub3();">질문안내</a></li>
 				<li class="menu6 <?php echo ($current_gr_id == 'sub06' || $current_gr_id == 'sub07' || $current_gr_id == 'sub09') ? 'is_active' : ''; ?>"><a href="javascript:menu6sub1();">정보안내</a></li>
 				
@@ -108,7 +108,7 @@ $(function(){
 				
 				
 				<ul class="sub4">
-					<li><a href="javascript:menuPreparing();">노인일자리소개 <span class="nav_pending">연결 준비중</span></a></li>
+					<li><a href="javascript:menu4sub0();">노인일자리소개</a></li>
 					<li><a href="javascript:menu4sub2();">구직서비스</a></li>
 					<li><a href="javascript:menu4sub1();">구인서비스</a></li>
 				</ul>

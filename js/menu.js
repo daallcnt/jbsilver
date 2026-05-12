@@ -25,6 +25,7 @@ function menu3sub5() { location.href = g5_url+ "/bbs/board.php?bo_table=sub03_05
 
 
 //취업정보
+function menu4sub0() { location.href = g5_url+ "/sub/job_intro.php";}
 function menu4sub1() { location.href = g5_url+ "/bbs/board.php?bo_table=sub04_01";} 
 function menu4sub2() { location.href = g5_url+ "/bbs/board.php?bo_table=sub04_02";} 
 function menu4sub3() { location.href = g5_url+ "/bbs/board.php?bo_table=sub04_03";} 

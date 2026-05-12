@@ -122,6 +122,56 @@
 #tabmap #tabmap_on {z-index:2;border:1px solid #0069b6;background:#0069b6;color:#fff;font-weight:700}
 #tabmap a:hover {z-index:2;border:1px solid #0069b6;background:#fff;color:#0069b6;}
 
+/* 노인일자리소개 */
+#job_intro_figma {padding:0 24px 24px;color:#374151;font-family:'NotoSans','NanumGothic',dotum,sans-serif;text-align:left;}
+#job_intro_figma h3 {margin:0 0 20px;color:#1f2937;font-size:24px;line-height:40px;font-weight:bold;letter-spacing:0;}
+.ji_intro {padding-bottom:56px;}
+.ji_summary {padding:23px;border:1px solid #e5e7eb;border-radius:12px;background:#f9fafb;}
+.ji_summary p {position:relative;margin:0;padding-left:18px;color:#374151;font-size:16px;line-height:24px;word-break:keep-all;}
+.ji_summary p + p {margin-top:16px;}
+.ji_summary p:before {content:"";position:absolute;left:0;top:9px;width:6px;height:6px;border-radius:50%;background:#9ca3af;}
+.ji_summary strong {color:#1f2937;font-weight:bold;}
+.ji_contents {padding-bottom:20px;}
+.ji_table_wrap {margin-bottom:40px;overflow-x:auto;border:1px solid #e5e7eb;border-radius:12px;background:#fff;}
+.ji_type_table {width:100%;min-width:980px;border-collapse:collapse;table-layout:fixed;}
+.ji_type_table th {height:48px;padding:4px 12px;border-right:1px solid #e5e7eb;background:#f3f4f6;color:#374151;font-size:14px;line-height:20px;font-weight:bold;text-align:center;}
+.ji_type_table th:last-child {border-right:0;}
+.ji_type_table td {padding:10px 12px;border-top:1px solid #e5e7eb;border-right:1px solid #e5e7eb;color:#374151;font-size:14px;line-height:22px;text-align:center;vertical-align:middle;word-break:keep-all;}
+.ji_type_table td:last-child {border-right:0;}
+.ji_type_table td:nth-child(3) {padding-left:16px;text-align:left;}
+.ji_type_table th:nth-child(1), .ji_type_table td:nth-child(1) {width:80px;}
+.ji_type_table th:nth-child(2), .ji_type_table td:nth-child(2) {width:160px;}
+.ji_type_table th:nth-child(4), .ji_type_table td:nth-child(4),
+.ji_type_table th:nth-child(5), .ji_type_table td:nth-child(5) {width:120px;}
+.ji_type_table th:nth-child(6), .ji_type_table td:nth-child(6) {width:110px;}
+.ji_detail {padding-top:40px;}
+.ji_detail:first-child {padding-top:0;}
+.ji_detail h4 {display:flex;align-items:center;gap:8px;margin:0 0 20px;color:#1f2937;font-size:18px;line-height:28px;font-weight:bold;letter-spacing:0;}
+.ji_detail h4 span {display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;background:#2563eb;color:#fff;font-size:12px;line-height:16px;font-weight:bold;}
+.ji_detail ul {margin:0 0 20px;padding:0;list-style:none;}
+.ji_detail li {position:relative;margin:0;padding-left:20px;color:#374151;font-size:16px;line-height:26px;word-break:keep-all;}
+.ji_detail li + li {margin-top:12px;}
+.ji_detail li:before {content:"";position:absolute;left:0;top:9px;width:8px;height:8px;border-radius:50%;background:#9ca3af;}
+.ji_detail li.ji_note {padding-left:36px;color:#4b5563;}
+.ji_detail li.ji_note:before {display:none;}
+.ji_detail strong {color:#374151;font-weight:bold;}
+.ji_detail em {color:#1d4ed8;font-style:normal;text-decoration:underline;text-underline-offset:3px;}
+.ji_detail_table {width:100%;border:1px solid #e5e7eb;border-radius:12px;border-collapse:separate;border-spacing:0;overflow:hidden;table-layout:fixed;}
+.ji_detail_table th {height:44px;padding:10px 16px;background:#f3f4f6;border-right:1px solid #e5e7eb;color:#374151;font-size:14px;line-height:20px;font-weight:bold;text-align:center;}
+.ji_detail_table th:last-child {border-right:0;}
+.ji_detail_table td {padding:10px 20px;border-top:1px solid #e5e7eb;border-right:1px solid #e5e7eb;color:#374151;font-size:14px;line-height:22.75px;vertical-align:middle;word-break:keep-all;}
+.ji_detail_table td:first-child {width:140px;text-align:center;font-weight:bold;}
+.ji_detail_table td:last-child {border-right:0;}
+
+@media (max-width: 760px) {
+	#job_intro_figma {padding:0;}
+	#job_intro_figma h3 {font-size:20px;line-height:30px;}
+	.ji_summary {padding:18px;}
+	.ji_summary p,
+	.ji_detail li {font-size:15px;line-height:24px;}
+	.ji_detail_table {min-width:760px;}
+}
+
 
 
 /* 취업정보 */
@@ -249,7 +299,6 @@ box-shadow: inset 0 1px 1px rgba(0, 0, 0, .075);
 .edu_td_num {width:50px;text-align:center}
 .edu_td_numbig {width:80px;text-align:center}
 .edu_td_stat {width:60px;text-align:center}
-
 
 
 
