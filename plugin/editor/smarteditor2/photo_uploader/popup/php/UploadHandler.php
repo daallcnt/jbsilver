@@ -1100,20 +1100,61 @@ class UploadHandler
         return true;
     }
 
+    protected function is_accepted_image_upload($file_path)
+    {
+        if (!function_exists('getimagesize')) {
+            return false;
+        }
+
+        $image_info = @getimagesize($file_path);
+        if (!$image_info || empty($image_info['mime'])) {
+            return false;
+        }
+
+        return array_key_exists($image_info['mime'], self::$MIME_TYPES_PROCESSORS);
+    }
+
+    protected function get_image_extension($file_path, $name)
+    {
+        $filename_ext = strtolower(pathinfo($name, PATHINFO_EXTENSION));
+        if (preg_match('/^(gif|jpe?g|bmp|png)$/i', $filename_ext)) {
+            return $filename_ext;
+        }
+
+        $image_info = @getimagesize($file_path);
+        if (!$image_info || empty($image_info['mime'])) {
+            return $filename_ext;
+        }
+
+        switch ($image_info['mime']) {
+            case 'image/jpeg':
+            case 'image/jpg':
+                return 'jpg';
+            case 'image/png':
+                return 'png';
+            case 'image/gif':
+                return 'gif';
+            case 'image/bmp':
+                return 'bmp';
+        }
+
+        return $filename_ext;
+    }
+
     protected function handle_file_upload($uploaded_file, $name, $size, $type, $error,
             $index = null, $content_range = null) {
         $file = new \stdClass();
         $file->oriname = $this->get_file_name($uploaded_file, $name, $size, $type, $error,
             $index, $content_range);
         
-        $filename_ext = pathinfo($name, PATHINFO_EXTENSION);
+        $filename_ext = $this->get_image_extension($uploaded_file, $name);
         $file->name = $this->get_file_passname().'_'.str_replace(".", "_", $this->get_microtime()).".".$filename_ext;
 
         //$file->name = iconv('UTF-8', 'UTF-8//IGNORE', utf8_encode($file->name));
         $file->size = $this->fix_integer_overflow(intval($size));
         $file->type = $type;
 
-        if ( SMARTEDITOR_UPLOAD_IMG_CHECK && ! $this->reprocessImage($uploaded_file, null) ){
+        if (SMARTEDITOR_UPLOAD_IMG_CHECK && !$this->is_accepted_image_upload($uploaded_file)) {
             $file->error = $this->get_error_message('accept_file_types');
             return $file;
         }
