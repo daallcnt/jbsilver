@@ -36,17 +36,17 @@ class UploadHandler
         // PHP File Upload error message codes:
         // http://php.net/manual/en/features.file-upload.errors.php
         $this->error_messages = array(
-            1 => 'The uploaded file exceeds the upload_max_filesize',
-            2 => 'The uploaded file exceeds the MAX_FILE_SIZE directive that was specified in the HTML form',
-            3 => 'The uploaded file was only partially uploaded',
-            4 => 'No file was uploaded',
-            6 => 'Missing a temporary folder',
-            7 => 'Failed to write file to disk',
-            8 => 'A PHP extension stopped the file upload',
-            'post_max_size' => 'The uploaded file exceeds the post_max_size',
-            'max_file_size' => 'File is too big',
-            'min_file_size' => 'File is too small',
-            'accept_file_types' => 'Filetype not allowed',
+            1 => '업로드 가능한 파일 용량을 초과했습니다.',
+            2 => '업로드 가능한 파일 용량을 초과했습니다.',
+            3 => '파일이 일부만 업로드되었습니다.',
+            4 => '업로드된 파일이 없습니다.',
+            6 => '임시 업로드 폴더가 없습니다.',
+            7 => '파일 저장에 실패했습니다.',
+            8 => 'PHP 확장 기능이 업로드를 중단했습니다.',
+            'post_max_size' => '업로드 가능한 파일 용량을 초과했습니다.',
+            'max_file_size' => '파일 용량이 너무 큽니다.',
+            'min_file_size' => '파일 용량이 너무 작습니다.',
+            'accept_file_types' => '허용되지 않는 파일 형식입니다.',
             'max_number_of_files' => 'Maximum number of files exceeded',
             'max_width' => 'Image exceeds maximum width',
             'min_width' => 'Image requires a minimum width',
@@ -1154,12 +1154,12 @@ class UploadHandler
         $file->size = $this->fix_integer_overflow(intval($size));
         $file->type = $type;
 
-        if (SMARTEDITOR_UPLOAD_IMG_CHECK && !$this->is_accepted_image_upload($uploaded_file)) {
-            $file->error = $this->get_error_message('accept_file_types');
-            return $file;
-        }
-
         if ($this->validate($uploaded_file, $file, $error, $index)) {
+            if (SMARTEDITOR_UPLOAD_IMG_CHECK && !$this->is_accepted_image_upload($uploaded_file)) {
+                $file->error = $this->get_error_message('accept_file_types');
+                return $file;
+            }
+
             $this->handle_form_data($file, $index);
             $upload_dir = $this->get_upload_path();
             if (!is_dir($upload_dir)) {
