@@ -435,7 +435,7 @@ include_once('./admin.head.php');
 ?>
 
 <div class="local_desc01 local_desc">
-    <p><strong>6*.xls(x), 7*.xls(x)</strong> 파일을 읽어 <strong>sub04_03 구인구직 QnA</strong> 게시판에 등록합니다.</p>
+    <p><strong>6*.xls(x), 7*.xls(x)</strong> 파일을 읽어 <strong>sub04_03 무엇이든 물어보세요 QnA</strong> 게시판에 등록합니다.</p>
     <p>7번 파일을 먼저 읽고, 6번 파일은 중복 게시번호/내용이면 자동으로 건너뜁니다.</p>
     <p>검색 경로: <?php echo htmlspecialchars(implode(' / ', $search_dirs), ENT_QUOTES, 'UTF-8'); ?></p>
     <p>글 테이블: <?php echo htmlspecialchars($write_table, ENT_QUOTES, 'UTF-8'); ?> / 상태: <?php echo $write_table_ready ? '있음' : '없음'; ?></p>

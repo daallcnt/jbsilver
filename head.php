@@ -67,7 +67,7 @@ switch ($gr_id) {
 	switch ($bo_table) {
 	  case 'sub04_01' :$SWF_Num = '3';	$board['bo_subject'] = '60+구인정보';  break;
 	  case 'sub04_02' :$SWF_Num = '2';	$board['bo_subject'] = '60+구직정보';  break;
-	  case 'sub04_03' :$SWF_Num = '4';	$board['bo_subject'] = '구인구직 QnA';  break;
+	  case 'sub04_03' :$SWF_Num = '4';	$board['bo_subject'] = '무엇이든 물어보세요 QnA';  break;
 	}
 	break;
 	case "sub05" :
