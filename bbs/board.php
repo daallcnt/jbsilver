@@ -17,6 +17,9 @@ if (!$bo_table) {
 }
 
 $g5['board_title'] = ((G5_IS_MOBILE && $board['bo_mobile_subject']) ? $board['bo_mobile_subject'] : $board['bo_subject']);
+if ($bo_table == 'sub04_03') {
+    $g5['board_title'] = '무엇이든 물어보세요 QnA';
+}
 
 // wr_id 값이 있으면 글읽기
 if (isset($wr_id) && $wr_id) {

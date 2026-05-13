@@ -214,7 +214,12 @@ else
     $write_max = (int)$board['bo_write_max'];
 }
 
-$g5['title'] = ((G5_IS_MOBILE && $board['bo_mobile_subject']) ? $board['bo_mobile_subject'] : $board['bo_subject']).' '.$title_msg;
+$write_board_title = ((G5_IS_MOBILE && $board['bo_mobile_subject']) ? $board['bo_mobile_subject'] : $board['bo_subject']);
+if ($bo_table == 'sub04_03') {
+    $write_board_title = '무엇이든 물어보세요 QnA';
+}
+
+$g5['title'] = $write_board_title.' '.$title_msg;
 
 $is_notice = false;
 $notice_checked = '';
