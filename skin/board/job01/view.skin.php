@@ -129,10 +129,8 @@ if($wr7[1] == '날짜입력'){
     </tr>
     <tr>
         <th scope="row">모집인원</th>
-        <td><?php echo number_format($wr8[0])?>명</td>
-        <th scope="row">연령</th>
-        <td><?php echo (!$wr8[4]) ? $wr8[2].'세	~	'.$wr8[3].'세'	:	$wr8[4];?></td>        
-    </tr>    
+        <td colspan="3"><?php echo number_format($wr8[0])?>명</td>
+    </tr>
     <tr>
         <th scope="row">근무시간</th>
         <td colspan="3">
