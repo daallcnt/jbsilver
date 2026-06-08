@@ -9,10 +9,71 @@ auth_check($auth[$sub_menu], "w");
 
 //check_admin_token();
 
+function sunedu_query($sql)
+{
+    $result = sql_query($sql, false);
+    if (!$result) {
+        alert('교육 저장 중 DB 오류가 발생했습니다.\\n'.sql_error_info());
+    }
+
+    return $result;
+}
+
+function sunedu_alert_unsupported_chars($fields)
+{
+    foreach ($fields as $label => $value) {
+        if ($value !== '' && preg_match('/[\x{10000}-\x{10FFFF}]/u', $value)) {
+            alert($label.' 항목에 현재 DB 문자셋에서 저장할 수 없는 문자가 포함되어 있습니다.\\n이모지나 특수 그림문자를 제거한 뒤 다시 저장해 주세요.');
+        }
+    }
+}
+
+function sunedu_int_value($label, $value, $required=false)
+{
+    $value = trim((string)$value);
+    $value = strtr($value, array(
+        '０' => '0',
+        '１' => '1',
+        '２' => '2',
+        '３' => '3',
+        '４' => '4',
+        '５' => '5',
+        '６' => '6',
+        '７' => '7',
+        '８' => '8',
+        '９' => '9',
+    ));
+    $value = preg_replace('/[^0-9-]/', '', $value);
+
+    if ($value === '' || $value === '-') {
+        if ($required) {
+            alert($label.' 항목은 숫자로 입력해 주세요.');
+        }
+
+        return 0;
+    }
+
+    return (int)$value;
+}
+
+sunedu_alert_unsupported_chars(array(
+    '교육명' => $subject,
+    '교육장소' => $place,
+    '교육내용' => $contents,
+    '강사명' => $edu_01,
+    '접수일시' => $edu_02,
+    '비회원교육비' => $edu_03,
+    '회원교육비' => $edu_06,
+    '입금계좌번호' => $edu_04,
+    '입금기한' => $edu_05,
+));
+
+$person = sunedu_int_value('교육정원', $person, true);
+$wating = sunedu_int_value('대기인원', $wating);
 
 $sql_common = " subject     = '$subject',
-                person      = '$person',
-                wating      = '$wating',
+                person      = $person,
+                wating      = $wating,
                 schedule    = '$schedule', 
 				edate    = '$edate', 
                 place       = '$place',
@@ -36,12 +97,15 @@ if ($w == "")
     if ($row['s_id'])
         alert("이미 같은 ID로 등록된 교육이 있습니다.");
 
-    $sql = " insert wp_education 
+    $sql = " insert wp_education
                 set wdate = '".G5_TIME_YMDHIS."',
                     $sql_common ";
-    sql_query($sql);
-	//echo $sql;
-	$s_id = sql_insert_id();
+    sunedu_query($sql);
+		//echo $sql;
+		$s_id = sql_insert_id();
+    if (!$s_id) {
+        alert('교육 저장 중 DB 오류가 발생했습니다.\\n등록 번호를 생성하지 못했습니다.');
+    }
 
 }
 else if ($w == "u")
@@ -51,11 +115,11 @@ else if ($w == "u")
     if (!$row['s_id'])
         alert("잘못된 ID로 등록된 교육입니다.");	
 	
-    $sql = " update wp_education  
+    $sql = " update wp_education
                 set mdate = '".G5_TIME_YMDHIS."',
-					$sql_common
+						$sql_common
               where s_id = '$s_id' ";
-    sql_query($sql);
+    sunedu_query($sql);
 }
 //첨부파일-------------------------------------------------------------------------------------------------
 // 파일개수 체크
@@ -195,9 +259,14 @@ for ($i=0; $i<count($_FILES['bf_file']['name']); $i++) {
 // 나중에 테이블에 저장하는 이유는 $wr_id 값을 저장해야 하기 때문입니다.
 for ($i=0; $i<count($upload); $i++)
 {
-    if (!get_magic_quotes_gpc()) {
+    if (!function_exists('get_magic_quotes_gpc') || !get_magic_quotes_gpc()) {
         $upload[$i]['source'] = addslashes($upload[$i]['source']);
     }
+
+    $bf_filesize = (int)$upload[$i]['filesize'];
+    $bf_width = (int)$upload[$i]['image']['0'];
+    $bf_height = (int)$upload[$i]['image']['1'];
+    $bf_type = (int)$upload[$i]['image']['2'];
 
     $row = sql_fetch(" select count(*) as cnt from {$g5['board_file_table']} where bo_table = '{$bo_table}' and wr_id = '{$s_id}' and bf_no = '{$i}' ");
     if ($row['cnt'])
@@ -210,16 +279,16 @@ for ($i=0; $i<count($upload); $i++)
                         set bf_source = '{$upload[$i]['source']}',
                              bf_file = '{$upload[$i]['file']}',
                              bf_content = '{$bf_content[$i]}',
-                             bf_filesize = '{$upload[$i]['filesize']}',
-                             bf_width = '{$upload[$i]['image']['0']}',
-                             bf_height = '{$upload[$i]['image']['1']}',
-                             bf_type = '{$upload[$i]['image']['2']}',
+                             bf_filesize = $bf_filesize,
+                             bf_width = $bf_width,
+                             bf_height = $bf_height,
+                             bf_type = $bf_type,
                              bf_datetime = '".G5_TIME_YMDHIS."'
                       where bo_table = '{$bo_table}'
                                 and wr_id = '{$s_id}'
                                 and bf_no = '{$i}' ";
-            sql_query($sql);
-        }
+	            sunedu_query($sql);
+	        }
         else
         {
             $sql = " update {$g5['board_file_table']} 
@@ -227,8 +296,8 @@ for ($i=0; $i<count($upload); $i++)
                         where bo_table = '{$bo_table}'
                                   and wr_id = '{$s_id}'
                                   and bf_no = '{$i}' ";
-            sql_query($sql);
-        }
+	            sunedu_query($sql);
+	        }
     }
     else
     {
@@ -240,13 +309,13 @@ for ($i=0; $i<count($upload); $i++)
                          bf_file = '{$upload[$i]['file']}',
                          bf_content = '{$bf_content[$i]}',
                          bf_download = 0,
-                         bf_filesize = '{$upload[$i]['filesize']}',
-                         bf_width = '{$upload[$i]['image']['0']}',
-                         bf_height = '{$upload[$i]['image']['1']}',
-                         bf_type = '{$upload[$i]['image']['2']}',
+                         bf_filesize = $bf_filesize,
+                         bf_width = $bf_width,
+                         bf_height = $bf_height,
+                         bf_type = $bf_type,
                          bf_datetime = '".G5_TIME_YMDHIS."' ";
-        sql_query($sql);
-    }
+	        sunedu_query($sql);
+	    }
 }
 
 // 업로드된 파일 내용에서 가장 큰 번호를 얻어 거꾸로 확인해 가면서
@@ -260,12 +329,12 @@ for ($i=(int)$row['max_bf_no']; $i>=0; $i--)
     if ($row2['bf_file']) break;
 
     // 그렇지 않다면 정보를 삭제합니다.
-    sql_query(" delete from {$g5['board_file_table']} where bo_table = '{$bo_table}' and wr_id = '{$s_id}' and bf_no = '{$i}' ");
+    sunedu_query(" delete from {$g5['board_file_table']} where bo_table = '{$bo_table}' and wr_id = '{$s_id}' and bf_no = '{$i}' ");
 }
 
 // 파일의 개수를 게시물에 업데이트 한다.
 $row = sql_fetch(" select count(*) as cnt from {$g5['board_file_table']} where bo_table = '{$bo_table}' and wr_id = '{$s_id}' ");
-sql_query(" update wp_education set wr_file = '{$row['cnt']}' where s_id = '{$s_id}' ");
+sunedu_query(" update wp_education set wr_file = '{$row['cnt']}' where s_id = '{$s_id}' ");
 
 
 //첨부파일끝--------------------------------------------------------------------------
@@ -274,7 +343,7 @@ sql_query(" update wp_education set wr_file = '{$row['cnt']}' where s_id = '{$s_
 
 if ($w == "u")
 {
-   alert("수정되었습니다.","./sunedu_form.php?$qstr&w=u&s_id={$_POST[s_id]}");  
+   alert("수정되었습니다.","./sunedu_form.php?$qstr&w=u&s_id={$_POST['s_id']}");
 }
 else
 {
