@@ -189,7 +189,7 @@ html ul.stabs li.active, html ul.stabs li.active a:hover, html ul.stabs li.activ
 	.board_more {float:right;margin:0;padding:0;}
 
 
-#main_box_line {position:relative;min-width:1050px;padding:42px 0 48px;background:#fff}
+#main_box_line {position:relative;min-width:1050px;padding:84px 0 96px;background:#fff}
 	#main_box_area {position:relative;display:block;margin:0 auto;padding:0;width:1050px;zoom:1;list-style:none;}
 	#main_box_area:after {display:block;visibility:hidden;clear:both;content:""}
 	
